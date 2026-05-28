@@ -26,6 +26,14 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     path: '/admin/products',
     allowedRoles: ['admin'], // Admin product manager
   },
+  {
+    path: '/promotions',
+    allowedRoles: ['user'], // User promotions
+  },
+  {
+    path: '/admin/promotions',
+    allowedRoles: ['admin'], // Admin promotions
+  },
 ];
 
 /**

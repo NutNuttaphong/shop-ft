@@ -11,7 +11,9 @@ import {
   Menu,
   X,
   Type,
-  ChevronRight
+  ChevronRight,
+  Tag,
+  Gift
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -61,10 +63,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     ? [
         { path: '/admin/dashboard', label: 'แดชบอร์ดภาพรวม', icon: LayoutDashboard },
         { path: '/admin/products', label: 'จัดการรายการสินค้า', icon: PackageCheck },
+        { path: '/admin/promotions', label: 'การจัดการโปรโมชั่น', icon: Tag },
       ]
     : [
         { path: '/products', label: 'ร้านค้าสั่งซื้อสินค้า', icon: ShoppingBag },
         { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
+        { path: '/promotions', label: 'โปรโมชั่น', icon: Gift },
       ];
 
   // Helper to count cart items
