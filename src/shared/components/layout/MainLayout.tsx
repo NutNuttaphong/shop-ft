@@ -37,10 +37,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   }, []);
 
-  const handleTextSizeChange = (size: 'standard' | 'large' | 'extra-large') => {
-    setTextSize(size);
-    localStorage.setItem('app_text_size', size);
-  };
+  // const handleTextSizeChange = (size: 'standard' | 'large' | 'extra-large') => {
+  //   setTextSize(size);
+  //   localStorage.setItem('app_text_size', size);
+  // };
 
   const handleLogout = () => {
     logout();
