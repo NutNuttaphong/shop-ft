@@ -274,7 +274,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {/* Mobile menu button */}
             <div className="flex items-center md:hidden space-x-3">
               {/* Simple Text Size indicator button for Mobile */}
-              <button
+              {/* <button
                 onClick={() => {
                   const nextSize = textSize === 'standard' ? 'large' : textSize === 'large' ? 'extra-large' : 'standard';
                   handleTextSizeChange(nextSize);
@@ -283,7 +283,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 title="เปลี่ยนขนาดตัวอักษร"
               >
                 <Type className="w-5 h-5" />
-              </button>
+              </button> */}
               
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -366,7 +366,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {/* Bottom Actions mobile */}
             <div className="pt-6 border-t border-slate-100 space-y-4">
               {/* Font Size controls for mobile */}
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <span className="text-[13px] font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1">
                   <Type className="w-3.5 h-3.5" /> ตั้งค่าขนาดตัวอักษร:
                 </span>
@@ -396,7 +396,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     ใหญ่มาก
                   </button>
                 </div>
-              </div>
+              </div> */}
 
               <button
                 onClick={handleLogout}
