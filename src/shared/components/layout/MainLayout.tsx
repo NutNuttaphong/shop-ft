@@ -24,7 +24,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const [open, setOpen] = useState(false);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [textSize, setTextSize] = useState<'standard' | 'large' | 'extra-large'>('standard');
 
@@ -190,8 +191,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
               {/* User profile card */}
               {user && (
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-4 cursor-pointer">
+                  <div onClick={() => setOpen(!open)} className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-2xl border border-slate-100">
                     <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
                       <User className="w-4 h-4" />
                     </div>
@@ -203,15 +204,69 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         บทบาท: {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้าซื้อสินค้า'}
                       </span>
                     </div>
+
+                    {open && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            right: 45,
+                            top: "65px",
+                            background: "#fff",
+                            border: "1px solid #ddd",
+                            borderRadius: "8px",
+                            width: "180px",
+                            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                          }}
+                        >
+                          <ul
+                            style={{
+                              listStyle: "none",
+                              margin: 0,
+                              padding: 15,
+                            }}
+                          >
+                            <li >
+                                <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
+                                  <User className="w-4 h-4" />
+                                </div>
+                                <div className="text-left">
+                                  <span className="font-extrabold text-[14px] text-slate-700 block leading-tight">
+                                    {user.displayName}
+                                  </span>
+                                  <span className="text-[11px] font-bold text-primary-600 uppercase tracking-widest block">
+                                    บทบาท: {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้าซื้อสินค้า'}
+                                  </span>
+                                </div>
+                            </li>
+
+                            <li>
+                              <button
+                                onClick={handleLogout}
+                                style={{
+                                  width: "100%",
+                                  padding: "10px 0px 0px 0px",
+                                  textAlign: "left",
+                                  border: "none",
+                                  background: "none",
+                                  cursor: "pointer",
+                                  color: "red",
+                                }}
+                              >
+                                Logout
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                    )}
                   </div>
 
-                  <button
+                  {/* <button
                     onClick={handleLogout}
                     className="flex items-center gap-1.5 px-4 py-2.5 bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-colors border border-danger-100"
                   >
                     <LogOut className="w-5 h-5" />
                     <span>ออกจากระบบ</span>
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>
