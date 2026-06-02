@@ -101,7 +101,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
             
             {/* Logo */}
@@ -149,7 +149,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <div className="hidden md:flex items-center space-x-6">
               
               {/* Text Size Accessibility Controls */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
+              {/* <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
                 <span className="px-2 text-slate-500 flex items-center gap-1 text-sm font-semibold">
                   <Type className="w-4 h-4" /> ขนาดตัวอักษร:
                 </span>
@@ -186,7 +186,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 >
                   ใหญ่มาก
                 </button>
-              </div>
+              </div> */}
 
               {/* User profile card */}
               {user && (
