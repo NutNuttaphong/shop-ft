@@ -10,7 +10,7 @@ import {
   User,
   Menu,
   X,
-  Type,
+  // Type,
   ChevronRight,
   Tag,
   Gift
