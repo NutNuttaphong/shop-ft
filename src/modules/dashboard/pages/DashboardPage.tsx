@@ -80,7 +80,7 @@ export const DashboardPage: React.FC = () => {
         {/* Low Stock Alert Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
           <div className="space-y-2">
-            <span className="text-slate-400 font-bold text-xs uppercase tracking-wider block">สินค้าสต็อกต่ำกว่าเกณฑ์</span>
+            <span className="text-slate-400 font-bold text-xs uppercase tracking-wider block">สินค้ามีสต็อกต่ำกว่าเกณฑ์</span>
             <span className={`text-3xl font-black block ${lowStockCount > 0 ? 'text-danger-600' : 'text-slate-900'}`}>
               {lowStockCount} รายการ
             </span>

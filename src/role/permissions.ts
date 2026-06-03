@@ -19,6 +19,10 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     allowedRoles: ['user'], // User cart
   },
   {
+    path: '/orders',
+    allowedRoles: ['user'], // User order history
+  },
+  {
     path: '/admin/dashboard',
     allowedRoles: ['admin'], // Admin analytics
   },

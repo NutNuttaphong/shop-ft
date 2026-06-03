@@ -4,6 +4,7 @@ import { MainLayout } from '../shared/components/layout/MainLayout';
 import { CatalogPage } from '../modules/products/pages/CatalogPage';
 import { CartPage } from '../modules/cart/pages/CartPage';
 import { PromotionsPage } from '../modules/promotions/pages/PromotionsPage';
+import { OrdersPage } from '../modules/cart/pages/OrdersPage';
 
 export const userRoutes: RouteObject[] = [
   {
@@ -22,6 +23,16 @@ export const userRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
           <CartPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/orders',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <OrdersPage />
         </MainLayout>
       </RoleGuard>
     ),

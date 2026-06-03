@@ -13,7 +13,8 @@ import {
   // Type,
   ChevronRight,
   Tag,
-  Gift
+  Gift,
+  History
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -69,6 +70,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     : [
         { path: '/products', label: 'ร้านค้าสั่งซื้อสินค้า', icon: ShoppingBag },
         { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
+        { path: '/orders', label: 'ประวัติการสั่งซื้อ', icon: History },
         { path: '/promotions', label: 'โปรโมชั่น', icon: Gift },
       ];
 
