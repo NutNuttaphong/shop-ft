@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Receipt, CheckCircle2, User, Truck, QrCode } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 
 export interface OrderItem {
   id: string;
