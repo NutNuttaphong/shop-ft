@@ -103,7 +103,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     <div className={`min-h-screen bg-slate-50 flex flex-col ${getTextSizeClass()} transition-all duration-200`}>
       
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm print:hidden">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
             
@@ -193,8 +193,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
               {/* User profile card */}
               {user && (
-                <div className="flex items-center gap-4 cursor-pointer">
-                  <div onClick={() => setOpen(!open)} className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="flex items-center gap-4 cursor-pointer relative">
+                  <div onClick={() => setOpen(!open)} className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors shadow-sm select-none">
                     <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
                       <User className="w-4 h-4" />
                     </div>
@@ -203,72 +203,63 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         {user.displayName}
                       </span>
                       <span className="text-[11px] font-bold text-primary-600 uppercase tracking-widest block">
-                        บทบาท: {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้าซื้อสินค้า'}
+                        {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้า'}
                       </span>
                     </div>
-
-                    {open && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            right: 45,
-                            top: "65px",
-                            background: "#fff",
-                            border: "1px solid #ddd",
-                            borderRadius: "8px",
-                            width: "180px",
-                            boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
-                          }}
-                        >
-                          <ul
-                            style={{
-                              listStyle: "none",
-                              margin: 0,
-                              padding: 15,
-                            }}
-                          >
-                            <li >
-                                <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
-                                  <User className="w-4 h-4" />
-                                </div>
-                                <div className="text-left">
-                                  <span className="font-extrabold text-[14px] text-slate-700 block leading-tight">
-                                    {user.displayName}
-                                  </span>
-                                  <span className="text-[11px] font-bold text-primary-600 uppercase tracking-widest block">
-                                    บทบาท: {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้าซื้อสินค้า'}
-                                  </span>
-                                </div>
-                            </li>
-
-                            <li>
-                              <button
-                                onClick={handleLogout}
-                                style={{
-                                  width: "100%",
-                                  padding: "10px 0px 0px 0px",
-                                  textAlign: "left",
-                                  border: "none",
-                                  background: "none",
-                                  cursor: "pointer",
-                                  color: "red",
-                                }}
-                              >
-                                Logout
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                    )}
                   </div>
 
-                  {/* <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-danger-50 hover:bg-danger-100 text-danger-700 font-bold rounded-xl transition-colors border border-danger-100"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    <span>ออกจากระบบ</span>
-                  </button> */}
+                  {/* Premium Dropdown Menu */}
+                  {open && (
+                    <div className="absolute right-0 top-16 bg-white border border-slate-200 rounded-2xl shadow-xl w-60 p-4 z-50 animate-scale-up space-y-3 font-sans animate-fade-in">
+                      <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                        <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-slate-600 border border-slate-200 flex-shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-[14px] text-slate-800 block truncate leading-snug">
+                            {user.displayName}
+                          </span>
+                          <span className="text-[11px] font-bold text-primary-600 uppercase tracking-widest block">
+                            {user.role === 'admin' ? 'ผู้ดูแลระบบ' : 'ลูกค้า'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <ul className="space-y-1 text-sm font-bold text-slate-600">
+                        <li>
+                          <Link
+                            to="/profile"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all"
+                          >
+                            <User className="w-4 h-4" />
+                            <span>แก้ไขข้อมูลส่วนตัว</span>
+                          </Link>
+                        </li>
+                        {user.role === 'user' && (
+                          <li>
+                            <Link
+                              to="/orders"
+                              onClick={() => setOpen(false)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-primary-600 transition-all"
+                            >
+                              <History className="w-4 h-4" />
+                              <span>ประวัติการสั่งซื้อ</span>
+                            </Link>
+                          </li>
+                        )}
+                        <li className="pt-2 border-t border-slate-100">
+                          <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-danger-50 text-danger-600 hover:text-danger-700 transition-all text-left"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>ออกจากระบบ</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -418,7 +409,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8">
+      <footer className="bg-white border-t border-slate-200 py-8 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[15px]">
           <div className="flex items-center space-x-2">
             <span className="font-bold text-slate-600 text-[16px]">สบายดีมาร์เก็ต</span>

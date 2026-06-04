@@ -5,6 +5,8 @@ export interface UserSession {
   role: UserRole;
   displayName: string;
   token?: string;
+  phone?: string;
+  address?: string;
 }
 
 export const ROLES = {

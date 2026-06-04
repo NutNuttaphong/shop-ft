@@ -5,6 +5,7 @@ import { CatalogPage } from '../modules/products/pages/CatalogPage';
 import { CartPage } from '../modules/cart/pages/CartPage';
 import { PromotionsPage } from '../modules/promotions/pages/PromotionsPage';
 import { OrdersPage } from '../modules/cart/pages/OrdersPage';
+import { ProfilePage } from '../modules/auth/pages/ProfilePage';
 
 export const userRoutes: RouteObject[] = [
   {
@@ -33,6 +34,16 @@ export const userRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
           <OrdersPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/profile',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <ProfilePage />
         </MainLayout>
       </RoleGuard>
     ),

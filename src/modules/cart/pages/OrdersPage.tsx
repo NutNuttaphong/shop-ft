@@ -99,7 +99,8 @@ export const OrdersPage: React.FC = () => {
 
   return (
     <div className="space-y-8 font-['Inter',sans-serif]">
-      {/* Title Header */}
+      <div className="space-y-8 print:hidden">
+        {/* Title Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-extrabold text-slate-900 flex items-center gap-2">
@@ -323,6 +324,7 @@ export const OrdersPage: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
 
       {/* View Receipt Modal Details */}
       {showReceiptModal && selectedOrder && (

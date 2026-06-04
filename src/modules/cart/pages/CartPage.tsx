@@ -37,9 +37,17 @@ export const CartPage: React.FC = () => {
   }>({});
 
   useEffect(() => {
-    if (user && user.displayName) {
-      const cleanName = user.displayName.replace(/\s*\(ลูกค้า\)\s*/g, '');
-      setCustomerName(cleanName);
+    if (user) {
+      if (user.displayName) {
+        const cleanName = user.displayName.replace(/\s*\(ลูกค้า\)\s*/g, '');
+        setCustomerName(cleanName);
+      }
+      if (user.phone) {
+        setCustomerPhone(user.phone);
+      }
+      if (user.address) {
+        setCustomerAddress(user.address);
+      }
     }
   }, [user]);
 
@@ -55,6 +63,15 @@ export const CartPage: React.FC = () => {
   useEffect(() => {
     loadCart();
   }, []);
+
+  useEffect(() => {
+    if (checkoutSuccess) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [checkoutSuccess]);
 
   const updateQuantity = (id: string, amount: number) => {
     const updated = cartItems.map(item => {

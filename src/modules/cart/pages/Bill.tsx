@@ -49,9 +49,9 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
 
   if (!order) {
     return (
-      <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center text-slate-500 shadow-md">
+      <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center text-slate-500 shadow-md max-w-md mx-auto">
         <Receipt className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-        <p className="font-bold">ไม่พบข้อมูลใบเสร็จรับเงิน</p>
+        <p className="font-bold text-base">ไม่พบข้อมูลใบเสร็จรับเงิน</p>
       </div>
     );
   }
@@ -61,200 +61,241 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
       const date = new Date(isoString);
       return date.toLocaleDateString('th-TH', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
       }) + ' น.';
     } catch {
       return '-';
     }
   };
 
-  // VAT (7% included in total)
   const vatAmount = (order.total * 7) / 107;
   const beforeVatAmount = order.total - vatAmount;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden print:shadow-none print:border-none print:rounded-none max-w-2xl mx-auto font-['Inter',sans-serif]">
-      {/* Decorative top bar */}
-      <div className="h-2 bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 print:hidden" />
+    <div className="receipt-print-wrapper w-full max-w-[400px] mx-auto py-4 px-2 print:p-0">
+      {/* Self-contained CSS for receipt styling and print layout */}
+      <style>{`
+        .receipt-paper {
+          background: #ffffff;
+          position: relative;
+          filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.05));
+          clip-path: polygon(
+            0% 0%, 2.5% 6px, 5% 0%, 7.5% 6px, 10% 0%, 12.5% 6px, 15% 0%, 17.5% 6px, 20% 0%, 22.5% 6px, 25% 0%, 27.5% 6px, 30% 0%, 32.5% 6px, 35% 0%, 37.5% 6px, 40% 0%, 42.5% 6px, 45% 0%, 47.5% 6px, 50% 0%, 52.5% 6px, 55% 0%, 57.5% 6px, 60% 0%, 62.5% 6px, 65% 0%, 67.5% 6px, 70% 0%, 72.5% 6px, 75% 0%, 77.5% 6px, 80% 0%, 82.5% 6px, 85% 0%, 87.5% 6px, 90% 0%, 92.5% 6px, 95% 0%, 97.5% 6px, 100% 0%,
+            100% 100%, 97.5% calc(100% - 6px), 95% 100%, 92.5% calc(100% - 6px), 90% 100%, 87.5% calc(100% - 6px), 85% 100%, 82.5% calc(100% - 6px), 80% 100%, 77.5% calc(100% - 6px), 75% 100%, 72.5% calc(100% - 6px), 70% 100%, 67.5% calc(100% - 6px), 65% 100%, 62.5% calc(100% - 6px), 60% 100%, 57.5% calc(100% - 6px), 55% 100%, 52.5% calc(100% - 6px), 50% 100%, 47.5% calc(100% - 6px), 45% 100%, 42.5% calc(100% - 6px), 40% 100%, 37.5% calc(100% - 6px), 35% 100%, 32.5% calc(100% - 6px), 30% 100%, 27.5% calc(100% - 6px), 25% 100%, 22.5% calc(100% - 6px), 20% 100%, 17.5% calc(100% - 6px), 15% 100%, 12.5% calc(100% - 6px), 10% 100%, 7.5% calc(100% - 6px), 5% 100%, 2.5% calc(100% - 6px), 0% 100%
+          );
+          border: 1px solid #e2e8f0;
+          border-top: none;
+          border-bottom: none;
+        }
 
-      <div className="p-8 space-y-6 sm:p-10">
-        
-        {/* Receipt Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-slate-100">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-              <Receipt className="w-6 h-6 text-primary-600 print:text-black" />
+        @media print {
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+          
+          html, body {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+
+          /* Hide all other root components on page */
+          body > * {
+            visibility: hidden !important;
+            display: none !important;
+          }
+
+          #root, #root * {
+            visibility: hidden !important;
+            display: none !important;
+          }
+
+          /* Ensure the target wrapper and children are visible */
+          .receipt-print-wrapper,
+          .receipt-print-wrapper * {
+            visibility: visible !important;
+            display: block !important;
+          }
+
+          /* Make inline/flex items work */
+          .receipt-print-wrapper .flex,
+          .receipt-print-wrapper .flex * {
+            display: flex !important;
+          }
+
+          /* Specifically make the wrapper print-only full screen */
+          .receipt-print-wrapper {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
+            margin: 0 !important;
+            padding: 4mm !important;
+            filter: none !important;
+            background: #ffffff !important;
+            display: block !important;
+          }
+
+          .receipt-paper {
+            clip-path: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            filter: none !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            width: 100% !important;
+          }
+
+          /* Avoid breaking items across sheets */
+          .receipt-section, .receipt-item {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
+      <div className="receipt-paper p-6 text-slate-800 font-sans text-xs space-y-4">
+        {/* Header */}
+        <div className="text-center space-y-1.5 pb-4 border-b border-dashed border-slate-300">
+          <div className="flex justify-center items-center gap-1.5">
+            <Receipt className="w-5 h-5 text-primary-600 print:text-black" />
+            <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
               SHOP ONLINE
             </h1>
-            <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-              บริษัท ช้อปออนไลน์ จำกัด (มหาชน)
-            </p>
-            <p className="text-[13px] text-slate-500 leading-normal max-w-sm">
-              123 อาคารสยามพารากอน ชั้น 4 ถนนพระรามที่ 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพมหานคร 10330
-            </p>
-            <p className="text-[13px] text-slate-400 font-medium">
-              เลขประจำตัวผู้เสียภาษี: 0105563001234 (สำนักงานใหญ่)
-            </p>
           </div>
-
-          <div className="sm:text-right space-y-1 bg-slate-50 p-4 rounded-2xl border border-slate-100 min-w-[200px] print:bg-white print:border-none print:p-0">
-            <span className="text-xs font-bold text-success-700 bg-success-50 px-2.5 py-1 rounded-full border border-success-100 uppercase tracking-wide inline-block mb-1 print:border-none print:p-0 print:text-black print:bg-white">
-              ชำระเงินเสร็จสิ้น
-            </span>
-            <p className="text-xs text-slate-400 font-bold block">เลขที่ใบเสร็จ / Receipt No.</p>
-            <p className="font-extrabold text-[15px] text-slate-900">{order.orderNo}</p>
-            <p className="text-xs text-slate-400 font-bold block pt-1">วันที่ทำรายการ / Date</p>
-            <p className="text-[13px] font-bold text-slate-700">{formatDate(order.date)}</p>
-          </div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            บริษัท ช้อปออนไลน์ จำกัด (มหาชน)
+          </p>
+          <p className="text-[10px] text-slate-500 leading-normal max-w-[280px] mx-auto">
+            123 อาคารสยามพารากอน ชั้น 4 ถนนพระรามที่ 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพฯ 10330
+          </p>
+          <p className="text-[9px] text-slate-400 font-medium">
+            เลขประจำตัวผู้เสียภาษี: 0105563001234
+          </p>
         </div>
 
-        {/* Customer & Shipping Details */}
-        <div className="bg-slate-50/50 rounded-2xl border border-slate-100 p-5 space-y-4 print:bg-white print:border-none print:p-0">
-          <h3 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
-            <User className="w-4 h-4 text-primary-600 print:text-black" />
-            ข้อมูลผู้รับสินค้า / Shipping Address
-          </h3>
+        {/* Receipt Status & Number */}
+        <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-4">
+          <div className="text-center font-bold text-slate-700 py-1 border border-slate-300 rounded mb-2 uppercase tracking-widest bg-slate-50 print:bg-white print:border-slate-400">
+            *** ชำระเงินเสร็จสิ้น ***
+          </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[14px]">
-            <div className="space-y-1">
-              <span className="text-slate-400 font-bold block text-xs uppercase tracking-wide">ชื่อผู้รับ / Name</span>
-              <span className="font-bold text-slate-800">{order.customer.name}</span>
-            </div>
-            
-            <div className="space-y-1">
-              <span className="text-slate-400 font-bold block text-xs uppercase tracking-wide">เบอร์โทรศัพท์ / Tel</span>
-              <span className="font-bold text-slate-800">{order.customer.phone}</span>
-            </div>
-
-            <div className="sm:col-span-2 space-y-1">
-              <span className="text-slate-400 font-bold block text-xs uppercase tracking-wide">ที่อยู่สำหรับจัดส่ง / Address</span>
-              <span className="font-semibold text-slate-700 leading-relaxed block bg-white p-3 rounded-xl border border-slate-100 print:p-0 print:border-none">
-                {order.customer.address}
-              </span>
-            </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">เลขที่ใบเสร็จ:</span>
+            <span className="font-extrabold text-slate-900">{order.orderNo}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">วันที่ทำรายการ:</span>
+            <span className="font-bold text-slate-800">{formatDate(order.date)}</span>
           </div>
         </div>
 
-        {/* Payment Info */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-slate-50/50 rounded-2xl border border-slate-100 p-5 print:bg-white print:border-none print:p-0">
-          <div className="space-y-1">
-            <span className="text-slate-400 font-bold block text-xs uppercase tracking-wide">วิธีการชำระเงิน / Payment Method</span>
-            <span className="font-extrabold text-slate-800 flex items-center gap-1.5 text-[15px]">
-              {order.paymentMethod === 'cod' ? (
-                <>
-                  <Truck className="w-5 h-5 text-primary-600 print:text-black" />
-                  <span>ชำระเงินปลายทาง (Cash on Delivery)</span>
-                </>
-              ) : (
-                <>
-                  <QrCode className="w-5 h-5 text-primary-600 print:text-black" />
-                  <span>ชำระเงินด้วย QR Code / PromptPay</span>
-                </>
-              )}
+        {/* Shipping details */}
+        <div className="space-y-1.5 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">
+          <span className="font-extrabold text-slate-900 block tracking-wide uppercase text-[10px]">
+            ข้อมูลผู้รับสินค้า / Shipping
+          </span>
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">ชื่อผู้รับ:</span>
+            <span className="font-bold text-slate-800">{order.customer.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">เบอร์โทร:</span>
+            <span className="font-bold text-slate-800">{order.customer.phone}</span>
+          </div>
+          <div className="space-y-0.5 pt-1">
+            <span className="text-slate-400 font-bold block">ที่อยู่จัดส่ง:</span>
+            <span className="font-semibold text-slate-700 block bg-slate-50 p-2 rounded border border-slate-100 print:bg-white print:p-0 print:border-none leading-relaxed text-[10px]">
+              {order.customer.address}
             </span>
           </div>
+        </div>
 
-          <div className="space-y-1 text-left sm:text-right w-full sm:w-auto">
-            <span className="text-slate-400 font-bold block text-xs uppercase tracking-wide">สถานะการชำระเงิน / Status</span>
-            <span className="font-extrabold text-success-600 flex items-center gap-1 text-[15px]">
-              <CheckCircle2 className="w-4 h-4" />
+        {/* Payment info */}
+        <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">ช่องทางชำระเงิน:</span>
+            <span className="font-extrabold text-slate-800">
+              {order.paymentMethod === 'cod' ? 'ชำระเงินปลายทาง (COD)' : 'QR Code / PromptPay'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400 font-bold">สถานะชำระเงิน:</span>
+            <span className="font-extrabold text-success-600 print:text-black">
               {order.paymentMethod === 'cod' ? 'รอชำระเมื่อรับสินค้า' : 'ชำระเงินเรียบร้อยแล้ว'}
             </span>
-            {order.paymentMethod === 'qr' && order.slipName && (
-              <span className="text-xs text-slate-400 block font-semibold truncate max-w-[200px]">
-                ไฟล์แนบ: {order.slipName}
-              </span>
-            )}
           </div>
         </div>
 
-        {/* Items Table */}
-        <div className="space-y-3">
-          <h3 className="font-extrabold text-sm text-slate-800 uppercase tracking-wider pb-1">
+        {/* Item List */}
+        <div className="space-y-3.5 border-b border-dashed border-slate-300 pb-4 receipt-section">
+          <span className="font-extrabold text-[10px] text-slate-900 block tracking-wide uppercase">
             รายการสินค้า / Product List
-          </h3>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                  <th className="py-3 px-1 text-center w-8">#</th>
-                  <th className="py-3 px-2">สินค้า / Items</th>
-                  <th className="py-3 px-2 text-right w-24">ราคาต่อชิ้น / Price</th>
-                  <th className="py-3 px-2 text-center w-16">จำนวน / Qty</th>
-                  <th className="py-3 px-2 text-right w-28">ยอดรวม / Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                {order.items.map((item, idx) => (
-                  <tr key={item.id} className="align-middle">
-                    <td className="py-3 px-1 text-center font-bold text-slate-400">{idx + 1}</td>
-                    <td className="py-3 px-2">
-                      <div className="space-y-0.5">
-                        <span className="font-extrabold text-slate-900 block leading-tight">{item.name}</span>
-                        <span className="text-[11px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded print:bg-white print:border print:border-slate-200">
-                          {item.category}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 text-right">{item.price.toLocaleString()} บาท</td>
-                    <td className="py-3 px-2 text-center">{item.quantity}</td>
-                    <td className="py-3 px-2 text-right text-slate-900">
-                      {(item.price * item.quantity).toLocaleString()} บาท
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          </span>
+          
+          <div className="space-y-3">
+            {order.items.map((item, idx) => (
+              <div key={item.id} className="receipt-item text-xs">
+                <div className="flex justify-between font-extrabold text-slate-900 leading-tight">
+                  <span>{idx + 1}. {item.name}</span>
+                  <span>{(item.price * item.quantity).toLocaleString()} บาท</span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-bold pl-3 flex justify-between pt-0.5">
+                  <span>{item.quantity} x {item.price.toLocaleString()} บาท</span>
+                  <span>({item.category})</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Totals Summary Card */}
-        <div className="border-t border-slate-200 pt-5 flex justify-end">
-          <div className="w-full sm:w-80 space-y-2 text-[14px] font-semibold text-slate-600">
-            <div className="flex justify-between">
-              <span>ราคารวมทั้งสิ้น (Subtotal)</span>
-              <span className="text-slate-900">{order.total.toLocaleString()} บาท</span>
-            </div>
-            
-            <div className="flex justify-between text-slate-500">
-              <span className="text-[13px]">ภาษีมูลค่าเพิ่ม (VAT 7% Included)</span>
-              <span className="text-[13px]">{vatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
-            </div>
+        {/* Summary */}
+        <div className="space-y-1.5 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">
+          <div className="flex justify-between">
+            <span className="text-slate-500 font-semibold">ราคารวม (Subtotal):</span>
+            <span className="text-slate-800 font-bold">{order.total.toLocaleString()} บาท</span>
+          </div>
+          
+          <div className="flex justify-between text-slate-400 text-[10px]">
+            <span>ภาษีมูลค่าเพิ่ม (VAT 7% Included):</span>
+            <span>{vatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
+          </div>
 
-            <div className="flex justify-between text-slate-500">
-              <span className="text-[13px]">มูลค่าสินค้าก่อนภาษี (Before VAT)</span>
-              <span className="text-[13px]">{beforeVatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
-            </div>
+          <div className="flex justify-between text-slate-400 text-[10px]">
+            <span>สินค้าก่อนภาษี (Before VAT):</span>
+            <span>{beforeVatAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท</span>
+          </div>
 
-            <div className="flex justify-between text-success-600">
-              <span>ค่าขนส่งจัดส่งสินค้า (Shipping)</span>
-              <span>จัดส่งฟรี</span>
-            </div>
+          <div className="flex justify-between text-success-600 print:text-black">
+            <span className="font-semibold">ค่าจัดส่ง (Shipping):</span>
+            <span className="font-bold">จัดส่งฟรี</span>
+          </div>
 
-            <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
-              <span className="text-base font-extrabold text-slate-900">ยอดชำระสุทธิ (Net Total)</span>
-              <span className="text-2xl font-black text-primary-600 print:text-black">
-                {order.total.toLocaleString()} <span className="text-sm font-bold text-slate-500">บาท</span>
-              </span>
-            </div>
+          <div className="border-t border-dotted border-slate-300 pt-2 flex justify-between items-baseline">
+            <span className="font-black text-slate-900">ยอดชำระสุทธิ (Net Total):</span>
+            <span className="text-base font-black text-primary-600 print:text-black">
+              {order.total.toLocaleString()} บาท
+            </span>
           </div>
         </div>
 
-        {/* Footer Note and Barcode */}
-        <div className="border-t border-dashed border-slate-200 pt-6 text-center space-y-4">
-          <p className="text-xs font-bold text-slate-400 italic">
-            ** ขอบพระคุณที่เลือกใช้บริการสั่งซื้อสินค้าออนไลน์กับเราค่ะ **
+        {/* Footer info & Barcode */}
+        <div className="text-center pt-2 space-y-3.5 receipt-section">
+          <p className="text-[10px] font-bold text-slate-400 italic">
+            ** ขอบพระคุณที่เลือกใช้บริการค่ะ **
           </p>
 
-          {/* SVG Barcode for authenticity */}
-          <div className="space-y-1.5 py-1">
-            <svg viewBox="0 0 200 40" className="w-48 h-8 mx-auto opacity-80">
-              <g fill="#0f172a">
+          <div className="space-y-1 py-1">
+            <svg viewBox="0 0 200 40" className="w-40 h-8 mx-auto opacity-75">
+              <g fill="#000000">
                 <rect x="0" width="3" height="40" />
                 <rect x="5" width="1" height="40" />
                 <rect x="8" width="2" height="40" />
@@ -303,12 +344,11 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
                 <rect x="196" width="3" height="40" />
               </g>
             </svg>
-            <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">
+            <span className="text-[8px] text-slate-400 font-extrabold tracking-widest block">
               *{order.orderNo}*
             </span>
           </div>
         </div>
-
       </div>
     </div>
   );
