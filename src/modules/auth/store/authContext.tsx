@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { UserSession } from '../../../role/roles';
 
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 interface AuthContextType {
   user: UserSession | null;
