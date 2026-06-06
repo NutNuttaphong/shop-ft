@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingBag, Trash2, Plus, Minus, CreditCard, ArrowLeft, HeartHandshake, MapPin, User, Phone, Truck, QrCode, AlertCircle, CheckCircle2, Printer } from 'lucide-react';
 import Bill from './Bill';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { restfulApi } from '../../../shared/services/api';
 
 interface CartItem {
-  id: string;
+  productId: string;
   name: string;
   price: number;
   quantity: number;
@@ -51,10 +52,14 @@ export const CartPage: React.FC = () => {
     }
   }, [user]);
 
-  const loadCart = () => {
+  const loadCart = async () => {
     try {
-      const items = JSON.parse(localStorage.getItem('app_cart') || '[]');
-      setCartItems(items);
+      const res = await restfulApi.get<CartItem[]>('/api/cart');
+      if (res.data) {
+        setCartItems(res.data);
+      } else {
+        setCartItems([]);
+      }
     } catch {
       setCartItems([]);
     }
@@ -73,30 +78,29 @@ export const CartPage: React.FC = () => {
     }
   }, [checkoutSuccess]);
 
-  const updateQuantity = (id: string, amount: number) => {
-    const updated = cartItems.map(item => {
-      if (item.id === id) {
-        const nextQty = item.quantity + amount;
-        // Limit nextQty to stock and min 1
-        if (nextQty > item.stock) {
-          alert(`ขออภัยค่ะ มีสินค้าอยู่ในคลังจำกัดเพียง ${item.stock} ชิ้น`);
-          return item;
-        }
-        if (nextQty < 1) return item;
-        return { ...item, quantity: nextQty };
-      }
-      return item;
-    });
+  const updateQuantity = async (productId: string, amount: number) => {
+    const item = cartItems.find(i => i.productId === productId);
+    if (!item) return;
 
-    setCartItems(updated);
-    localStorage.setItem('app_cart', JSON.stringify(updated));
+    const nextQty = item.quantity + amount;
+    if (nextQty > item.stock) {
+      alert(`ขออภัยค่ะ มีสินค้าอยู่ในคลังจำกัดเพียง ${item.stock} ชิ้น`);
+      return;
+    }
+    if (nextQty < 1) return;
+
+    const res = await restfulApi.put<CartItem[]>(`/api/cart/${productId}?quantity=${nextQty}`, {});
+    if (res.data) {
+      setCartItems(res.data);
+    }
     window.dispatchEvent(new Event('cart-updated'));
   };
 
-  const removeItem = (id: string) => {
-    const updated = cartItems.filter(item => item.id !== id);
-    setCartItems(updated);
-    localStorage.setItem('app_cart', JSON.stringify(updated));
+  const removeItem = async (productId: string) => {
+    const res = await restfulApi.delete<CartItem[]>(`/api/cart/${productId}`);
+    if (res.data) {
+      setCartItems(res.data);
+    }
     window.dispatchEvent(new Event('cart-updated'));
   };
 
@@ -136,65 +140,69 @@ export const CartPage: React.FC = () => {
     if (cartItems.length === 0) return;
     
     setIsSubmitting(true);
-    // Simulate server POST checkout request
-    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Deduct stock in our simulated localStorage DB
     try {
-      const dbStr = localStorage.getItem('app_products') || '[]';
-      const products = JSON.parse(dbStr);
-      
-      const updatedProducts = products.map((prod: any) => {
-        const cartMatch = cartItems.find(item => item.id === prod.id);
-        if (cartMatch) {
-          return {
-            ...prod,
-            stock: Math.max(0, prod.stock - cartMatch.quantity)
-          };
-        }
-        return prod;
+      const res = await restfulApi.post<any>('/api/orders/checkout', {
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerAddress: customerAddress,
+        paymentMethod: paymentMethod === 'cod' ? 'COD' : 'QR',
+        slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
+        slipName: uploadedSlipName || null,
       });
+
+      if (res.error) {
+        alert(`เกิดข้อผิดพลาด: ${res.error}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const order = res.data;
+
+      // Save order details to localStorage for the receipt component (Bill.tsx)
+      const orderData = {
+        orderNo: order.orderNo,
+        date: order.createdAt || new Date().toISOString(),
+        items: order.items.map((item: any) => ({
+          id: item.productId,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          imageUrl: item.imageUrl,
+          category: item.category,
+        })),
+        total: order.total,
+        customer: {
+          name: customerName,
+          phone: customerPhone,
+          address: customerAddress,
+        },
+        paymentMethod,
+        slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
+        slipName: uploadedSlipName || null
+      };
+      localStorage.setItem('app_last_order', JSON.stringify(orderData));
+
+      // Save to order history list
+      try {
+        const existingOrders = JSON.parse(localStorage.getItem('app_orders') || '[]');
+        const updatedOrders = [orderData, ...existingOrders];
+        localStorage.setItem('app_orders', JSON.stringify(updatedOrders));
+      } catch (e) {
+        console.error('Failed to save to order history', e);
+      }
+
+      // Clear cart
+      setCartItems([]);
+      window.dispatchEvent(new Event('cart-updated'));
       
-      localStorage.setItem('app_products', JSON.stringify(updatedProducts));
-    } catch (e) {
-      console.error(e);
+      setIsSubmitting(false);
+      setCheckoutSuccess(true);
+      setShowQrModal(false);
+    } catch (err) {
+      alert('เกิดข้อผิดพลาดในการสั่งซื้อ กรุณาลองใหม่อีกครั้ง');
+      setIsSubmitting(false);
     }
-
-    // Save order details to localStorage for the receipt component (Bill.tsx)
-    const orderNo = `INV-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const orderData = {
-      orderNo,
-      date: new Date().toISOString(),
-      items: [...cartItems],
-      total: grandTotal,
-      customer: {
-        name: customerName,
-        phone: customerPhone,
-        address: customerAddress,
-      },
-      paymentMethod,
-      slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
-      slipName: uploadedSlipName || null
-    };
-    localStorage.setItem('app_last_order', JSON.stringify(orderData));
-
-    // Save to order history list
-    try {
-      const existingOrders = JSON.parse(localStorage.getItem('app_orders') || '[]');
-      const updatedOrders = [orderData, ...existingOrders];
-      localStorage.setItem('app_orders', JSON.stringify(updatedOrders));
-    } catch (e) {
-      console.error('Failed to save to order history', e);
-    }
-
-    // Clear cart
-    localStorage.setItem('app_cart', '[]');
-    setCartItems([]);
-    window.dispatchEvent(new Event('cart-updated'));
-    
-    setIsSubmitting(false);
-    setCheckoutSuccess(true);
-    setShowQrModal(false);
   };
 
   const grandTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -280,7 +288,7 @@ export const CartPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
               <div
-                key={item.id}
+                key={item.productId}
                 className="bg-white border border-slate-200 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Info block */}
@@ -303,7 +311,7 @@ export const CartPage: React.FC = () => {
                   {/* Quantity selector */}
                   <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => updateQuantity(item.productId, -1)}
                       disabled={item.quantity <= 1}
                       className="w-10 h-10 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:hover:bg-white text-slate-600 rounded-xl flex items-center justify-center border border-slate-200 shadow-xs focus:ring-2 focus:ring-primary-300"
                       title="ลดจำนวน"
@@ -314,7 +322,7 @@ export const CartPage: React.FC = () => {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => updateQuantity(item.productId, 1)}
                       className="w-10 h-10 bg-white hover:bg-slate-50 text-slate-600 rounded-xl flex items-center justify-center border border-slate-200 shadow-xs focus:ring-2 focus:ring-primary-300"
                       title="เพิ่มจำนวน"
                     >
@@ -332,7 +340,7 @@ export const CartPage: React.FC = () => {
                     </div>
                     
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(item.productId)}
                       className="p-3 text-slate-400 hover:text-danger-600 hover:bg-danger-50 rounded-xl transition-all"
                       title="ลบรายการนี้"
                     >

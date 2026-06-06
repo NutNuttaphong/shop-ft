@@ -100,7 +100,7 @@ export const ManagePromotionsPage: React.FC = () => {
     if (!confirm(`คุณต้องการลบโปรโมชั่น "${name}" ออกจากระบบจริงหรือไม่?`)) return;
 
     try {
-      const res = await restfulApi.post<{ success: boolean }>(`/api/promotions/delete/${id}`, {});
+      const res = await restfulApi.delete<string>(`/api/promotions/${id}`);
       if (res.error) {
         alert(`เกิดข้อผิดพลาด: ${res.error}`);
       } else {
@@ -113,7 +113,9 @@ export const ManagePromotionsPage: React.FC = () => {
 
   const handleToggleActive = async (promo: Promotion) => {
     try {
-      const res = await restfulApi.post<Promotion>(`/api/promotions/edit/${promo.id}`, {
+      const res = await restfulApi.put<Promotion>(`/api/promotions/${promo.id}`, {
+        ...promo,
+        discountType: promo.discountType.toUpperCase(),
         isActive: !promo.isActive,
       });
       if (res.error) {
@@ -194,10 +196,16 @@ export const ManagePromotionsPage: React.FC = () => {
       let result;
       if (editingPromotion) {
         // Edit Mode
-        result = await restfulApi.post<Promotion>(`/api/promotions/edit/${editingPromotion.id}`, payload);
+        result = await restfulApi.put<Promotion>(`/api/promotions/${editingPromotion.id}`, {
+          ...payload,
+          discountType: payload.discountType.toUpperCase(),
+        });
       } else {
         // Add Mode
-        result = await restfulApi.post<Promotion>('/api/promotions', payload);
+        result = await restfulApi.post<Promotion>('/api/promotions', {
+          ...payload,
+          discountType: payload.discountType.toUpperCase(),
+        });
       }
 
       if (result.error) {

@@ -41,7 +41,7 @@ export const userRoutes: RouteObject[] = [
   {
     path: '/profile',
     element: (
-      <RoleGuard allowedRoles={['user']}>
+      <RoleGuard allowedRoles={['user', 'admin']}>
         <MainLayout>
           <ProfilePage />
         </MainLayout>

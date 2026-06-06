@@ -1,11 +1,13 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { UserSession } from '../../../role/roles';
 
+const API_BASE_URL = 'http://localhost:8080';
+
 interface AuthContextType {
   user: UserSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'user'; error?: string }>;
   logout: () => void;
   updateProfile: (displayName: string, phone?: string, address?: string) => void;
 }
@@ -29,40 +31,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'user'; error?: string }> => {
     setIsLoading(true);
-    // Simulate login delay
-    await new Promise(resolve => setTimeout(resolve, 600));
 
     const cleanUsername = username.trim();
     const cleanPassword = password.trim();
 
-    if (cleanUsername === 'user@1234' && cleanPassword === 'user@1234') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanUsername, password: cleanPassword }),
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        setIsLoading(false);
+        return { success: false, error: json.message || 'ชื่อผู้ใช้งาน หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง' };
+      }
+
+      const data = json.data;
       const session: UserSession = {
-        username: cleanUsername,
-        role: 'user',
-        displayName: 'สมชาย รักดี (ลูกค้า)',
+        username: data.username,
+        role: data.role.toLowerCase() as 'admin' | 'user',
+        displayName: data.displayName || data.username,
+        token: data.token,
+        phone: data.phone,
+        address: data.address,
       };
+
       setUser(session);
       localStorage.setItem('app_auth_session', JSON.stringify(session));
       setIsLoading(false);
-      return { success: true };
-    }
-
-    if (cleanUsername === 'admin@1234' && cleanPassword === 'admin@1234') {
-      const session: UserSession = {
-        username: cleanUsername,
-        role: 'admin',
-        displayName: 'สมศรี จัดการระบบ (ผู้ดูแล)',
-      };
-      setUser(session);
-      localStorage.setItem('app_auth_session', JSON.stringify(session));
+      return { success: true, role: session.role as 'admin' | 'user' };
+    } catch (err: any) {
       setIsLoading(false);
-      return { success: true };
+      return {
+        success: false,
+        error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่',
+      };
     }
-
-    setIsLoading(false);
-    return { success: false, error: 'ชื่อผู้ใช้งาน หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง' };
   };
 
   const logout = () => {
@@ -70,16 +79,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('app_auth_session');
   };
 
-  const updateProfile = (displayName: string, phone?: string, address?: string) => {
+  const updateProfile = async (displayName: string, phone?: string, address?: string) => {
     if (!user) return;
-    const updatedUser: UserSession = {
-      ...user,
-      displayName,
-      phone,
-      address
-    };
-    setUser(updatedUser);
-    localStorage.setItem('app_auth_session', JSON.stringify(updatedUser));
+
+    try {
+      const token = user.token;
+      const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ displayName, phone, address }),
+      });
+
+      const json = await response.json();
+
+      if (response.ok && json.success) {
+        const updatedUser: UserSession = {
+          ...user,
+          displayName: json.data.displayName || displayName,
+          phone: json.data.phone || phone,
+          address: json.data.address || address,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('app_auth_session', JSON.stringify(updatedUser));
+      } else {
+        // Fallback: update locally even if server fails
+        const updatedUser: UserSession = { ...user, displayName, phone, address };
+        setUser(updatedUser);
+        localStorage.setItem('app_auth_session', JSON.stringify(updatedUser));
+      }
+    } catch {
+      // Fallback: update locally
+      const updatedUser: UserSession = { ...user, displayName, phone, address };
+      setUser(updatedUser);
+      localStorage.setItem('app_auth_session', JSON.stringify(updatedUser));
+    }
   };
 
   const isAuthenticated = !!user;

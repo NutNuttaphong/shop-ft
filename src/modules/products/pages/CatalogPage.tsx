@@ -51,25 +51,20 @@ export const CatalogPage: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = async (product: Product) => {
     if (product.stock <= 0) return;
 
     try {
-      const cart = JSON.parse(localStorage.getItem('app_cart') || '[]');
-      const existing = cart.find((item: any) => item.id === product.id);
+      const res = await restfulApi.post<any>('/api/cart', {
+        productId: product.id,
+        quantity: 1,
+      });
 
-      if (existing) {
-        if (existing.quantity >= product.stock) {
-          alert('ขออภัยค่ะ จำนวนสินค้าในตะกร้าถึงขีดจำกัดจำนวนสินค้าที่มีในคลังแล้ว');
-          return;
-        }
-        existing.quantity += 1;
-      } else {
-        cart.push({ ...product, quantity: 1 });
+      if (res.error) {
+        alert(res.error);
+        return;
       }
 
-      localStorage.setItem('app_cart', JSON.stringify(cart));
-      
       // Dispatch custom storage event to alert MainLayout immediately
       window.dispatchEvent(new Event('cart-updated'));
 

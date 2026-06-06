@@ -88,7 +88,7 @@ export const ManageProductsPage: React.FC = () => {
     if (!confirm(`คุณต้องการลบสินค้า "${name}" ออกจากระบบจริงหรือไม่?`)) return;
 
     try {
-      const res = await restfulApi.post<{ success: boolean }>(`/api/products/delete/${id}`, {});
+      const res = await restfulApi.delete<string>(`/api/products/${id}`);
       if (res.error) {
         alert(`เกิดข้อผิดพลาด: ${res.error}`);
       } else {
@@ -137,7 +137,7 @@ export const ManageProductsPage: React.FC = () => {
       let result;
       if (editingProduct) {
         // Edit Mode
-        result = await restfulApi.post<Product>(`/api/products/edit/${editingProduct.id}`, payload);
+        result = await restfulApi.put<Product>(`/api/products/${editingProduct.id}`, payload);
       } else {
         // Add Mode
         result = await restfulApi.post<Product>('/api/products', payload);
