@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../modules/auth/hooks/useAuth';
+import { NotificationProvider } from './NotificationContext';
+import { NotificationDropdown } from './NotificationDropdown';
+import { ChatWidget } from './ChatWidget';
 import {
   ShoppingBag,
   ShoppingCart,
@@ -14,7 +17,9 @@ import {
   ChevronRight,
   Tag,
   Gift,
-  History
+  History,
+  BarChart3,
+  Radio
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -64,6 +69,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navItems = user?.role === 'admin' 
     ? [
         { path: '/admin/dashboard', label: 'แดชบอร์ดภาพรวม', icon: LayoutDashboard },
+        { path: '/admin/analytics', label: 'สถิติและรายงาน', icon: BarChart3 },
+        { path: '/admin/social', label: 'โซเชียลมีเดีย', icon: Radio },
         { path: '/admin/products', label: 'จัดการรายการสินค้า', icon: PackageCheck },
         { path: '/admin/promotions', label: 'การจัดการโปรโมชั่น', icon: Tag },
       ]
@@ -100,7 +107,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-slate-50 flex flex-col ${getTextSizeClass()} transition-all duration-200`}>
+    <NotificationProvider>
+      <div className={`min-h-screen bg-slate-50 flex flex-col ${getTextSizeClass()} transition-all duration-200`}>
       
       {/* Top Navbar */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm print:hidden">
@@ -191,6 +199,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </button>
               </div> */}
 
+              {user && <NotificationDropdown />}
               {/* User profile card */}
               {user && (
                 <div className="flex items-center gap-4 cursor-pointer relative">
@@ -421,6 +430,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </div>
       </footer>
 
+      <ChatWidget />
     </div>
+    </NotificationProvider>
   );
 };

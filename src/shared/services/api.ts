@@ -3,7 +3,7 @@
  * Connects to the real Spring Boot backend at localhost:8080
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -36,6 +36,10 @@ export interface Promotion {
   imageUrl?: string;
   startDate: string;
   endDate: string;
+  type?: string; // COUPON, FLASH_SALE, BUNDLE_DEAL, DISCOUNT_CAMPAIGN
+  productIds?: string[];
+  bundleQty?: number;
+  targetCategory?: string;
 }
 
 // Backend wraps everything in { success, message, data, status }
@@ -49,7 +53,7 @@ interface BackendResponse<T> {
 /**
  * Get the JWT token from localStorage
  */
-function getToken(): string | null {
+export function getToken(): string | null {
   try {
     const session = localStorage.getItem('app_auth_session');
     if (session) {
@@ -230,3 +234,24 @@ class RestClient {
 }
 
 export const restfulApi = new RestClient();
+
+export function getOrCreateSessionId(): string {
+  let sessionId = sessionStorage.getItem('app_visitor_session_id');
+  if (!sessionId) {
+    sessionId = 'sess-' + Math.random().toString(36).substring(2, 15) + '-' + Date.now().toString(36);
+    sessionStorage.setItem('app_visitor_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+export async function logVisitorVisit(pageUrl: string) {
+  try {
+    const sessionId = getOrCreateSessionId();
+    await restfulApi.post('/api/analytics/visit', {
+      sessionId,
+      pageUrl
+    });
+  } catch (e) {
+    console.error('Visitor logging failed', e);
+  }
+}

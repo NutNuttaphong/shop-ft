@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { restfulApi, Promotion } from '../../../shared/services/api';
-import { Gift, Copy, Check, Calendar, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { restfulApi, Promotion, Product, logVisitorVisit } from '../../../shared/services/api';
+import { Gift, Copy, Check, Calendar, AlertCircle, Sparkles, RefreshCw, Flame, Layers, ShoppingBag, Tag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../../shared/components/ui/Pagination';
 
 export const PromotionsPage: React.FC = () => {
   const navigate = useNavigate();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -35,8 +36,21 @@ export const PromotionsPage: React.FC = () => {
     }
   };
 
+  const fetchAllProducts = async () => {
+    try {
+      const response = await restfulApi.get<Product[]>('/api/products');
+      if (!response.error && response.data) {
+        setAllProducts(response.data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchPromotions();
+    fetchAllProducts();
+    logVisitorVisit(window.location.pathname);
   }, []);
 
   // Reset page when promotions list changes
@@ -68,6 +82,64 @@ export const PromotionsPage: React.FC = () => {
     }
   };
 
+  // Helper to render type badge
+  const renderPromoBadge = (type?: string) => {
+    switch (type) {
+      case 'FLASH_SALE':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg text-xs font-black uppercase">
+            <Flame className="w-3 h-3 fill-amber-500 text-amber-500 animate-pulse" />
+            Flash Sale
+          </span>
+        );
+      case 'BUNDLE_DEAL':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-lg text-xs font-black uppercase">
+            <Layers className="w-3 h-3 text-indigo-500" />
+            Bundle Deal
+          </span>
+        );
+      case 'DISCOUNT_CAMPAIGN':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 border border-purple-200 text-purple-700 rounded-lg text-xs font-black uppercase">
+            <ShoppingBag className="w-3 h-3 text-purple-500" />
+            Campaign
+          </span>
+        );
+      case 'COUPON':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-pink-50 border border-pink-200 text-pink-700 rounded-lg text-xs font-black uppercase">
+            <Tag className="w-3 h-3 text-pink-500" />
+            คูปองร้านค้า
+          </span>
+        );
+    }
+  };
+
+  // Helper to get promotion summary description
+  const getPromoSummary = (promo: Promotion) => {
+    switch (promo.type) {
+      case 'FLASH_SALE':
+        const flashProds = promo.productIds
+          ? allProducts.filter(p => promo.productIds?.includes(p.id))
+          : [];
+        const prodNames = flashProds.map(p => p.name).join(', ');
+        return `ลดราคาพิเศษสำหรับสินค้าที่ร่วมรายการ: ${prodNames || 'สินค้าที่เลือก'} (หักส่วนลดทันทีในตะกร้า)`;
+      case 'BUNDLE_DEAL':
+        const bundleProds = promo.productIds
+          ? allProducts.filter(p => promo.productIds?.includes(p.id))
+          : [];
+        const bNames = bundleProds.map(p => p.name).join(', ');
+        return `ซื้อสินค้าที่ร่วมรายการตั้งแต่ ${promo.bundleQty} ชิ้นขึ้นไป ลดราคาทันที: ${bNames || 'สินค้าที่เลือก'}`;
+      case 'DISCOUNT_CAMPAIGN':
+        return `ลดราคาพิเศษยกหมวดหมู่สำหรับสินค้าในกลุ่ม "${promo.targetCategory}" ทั้งหมด (หักส่วนลดอัตโนมัติ)`;
+      case 'COUPON':
+      default:
+        return promo.description || 'นำโค้ดไปกรอกเพื่อรับส่วนลดตอนจ่ายเงิน';
+    }
+  };
+
   const totalPages = Math.ceil(promotions.length / itemsPerPage);
   const paginatedPromotions = promotions.slice(
     (currentPage - 1) * itemsPerPage,
@@ -76,7 +148,7 @@ export const PromotionsPage: React.FC = () => {
 
   return (
     <div className="space-y-8 font-['Inter',sans-serif]">
-      
+
       {/* Intro Hero Banner */}
       <div className="bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-700 text-white rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
         <div className="absolute right-0 bottom-0 opacity-15 pointer-events-none transform translate-y-8 translate-x-8">
@@ -87,10 +159,10 @@ export const PromotionsPage: React.FC = () => {
             <Sparkles className="w-4 h-4 text-yellow-300" /> แคมเปญส่วนลดพิเศษสุดคุ้ม
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            โค้ดส่วนลดและโปรโมชั่นพิเศษ
+            โปรโมชั่นและแคมเปญส่วนลดพิเศษ
           </h1>
           <p className="text-pink-55 text-[16px] sm:text-[18px] leading-relaxed opacity-90">
-            เก็บโค้ดส่วนลดเพื่อนำไปใช้ประหยัดค่าใช้จ่าย ช้อปสินค้าคุ้มค่ากับสบายดีมาร์เก็ตได้แล้ววันนี้!
+            ช้อปสินค้าสุดคุ้มกับหลากหลายโปรโมชั่น ทั้งโค้ดส่วนลด, Flash Sale ประจำวัน, Bundle Deal ยิ่งซื้อยิ่งลด และส่วนลดตามหมวดหมู่แคมเปญ!
           </p>
         </div>
       </div>
@@ -141,7 +213,9 @@ export const PromotionsPage: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {paginatedPromotions.map((promo) => {
-              const isPercent = promo.discountType === 'percentage';
+              const isPercent = promo.discountType === 'PERCENTAGE' || promo.discountType === 'percentage';
+              const isAutoPromo = promo.type !== 'COUPON';
+
               return (
                 <div
                   key={promo.id}
@@ -156,7 +230,7 @@ export const PromotionsPage: React.FC = () => {
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent sm:hidden" />
-                    
+
                     {/* Badge Label */}
                     <div className="absolute top-4 left-4 bg-pink-600 text-white px-3.5 py-1.5 rounded-xl text-sm font-extrabold shadow-md">
                       {isPercent ? `ลด ${promo.discountValue}%` : `ลด ${promo.discountValue} บาท`}
@@ -164,13 +238,16 @@ export const PromotionsPage: React.FC = () => {
                   </div>
 
                   {/* Right Info Details */}
-                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="p-6 flex-1 flex flex-col justify-between space-y-3.5">
                     <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        {renderPromoBadge(promo.type)}
+                      </div>
                       <h3 className="font-extrabold text-xl text-slate-900 group-hover:text-pink-600 transition-colors">
                         {promo.name}
                       </h3>
-                      <p className="text-[14px] text-slate-500 leading-relaxed">
-                        {promo.description || 'ไม่มีคำอธิบายเพิ่มเติม'}
+                      <p className="text-[14px] text-slate-500 leading-relaxed font-semibold">
+                        {getPromoSummary(promo)}
                       </p>
                     </div>
 
@@ -181,39 +258,52 @@ export const PromotionsPage: React.FC = () => {
                         <span>ใช้ได้ตั้งแต่: {formatThaiDate(promo.startDate)} - {formatThaiDate(promo.endDate)}</span>
                       </div>
 
-                      {promo.minPurchase > 0 ? (
-                        <div className="flex items-center text-xs font-bold text-amber-600 gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg w-fit border border-amber-100">
-                          <AlertCircle className="w-4 h-4 text-amber-500" />
-                          <span>ซื้อขั้นต่ำ {promo.minPurchase.toLocaleString()} บาทขึ้นไป</span>
-                        </div>
+                      {promo.type === 'COUPON' ? (
+                        promo.minPurchase > 0 ? (
+                          <div className="flex items-center text-xs font-bold text-amber-600 gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg w-fit border border-amber-100">
+                            <AlertCircle className="w-4 h-4 text-amber-500" />
+                            <span>ซื้อขั้นต่ำ {promo.minPurchase.toLocaleString()} บาทขึ้นไป</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center text-xs font-bold text-emerald-600 gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg w-fit border border-emerald-100">
+                            <AlertCircle className="w-4 h-4 text-emerald-500" />
+                            <span>ไม่มีขั้นต่ำในการสั่งซื้อ</span>
+                          </div>
+                        )
                       ) : (
-                        <div className="flex items-center text-xs font-bold text-emerald-600 gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg w-fit border border-emerald-100">
-                          <AlertCircle className="w-4 h-4 text-emerald-500" />
-                          <span>ไม่มีขั้นต่ำในการสั่งซื้อ</span>
+                        <div className="flex items-center text-xs font-bold text-indigo-600 gap-1.5 bg-indigo-50 px-2.5 py-1 rounded-lg w-fit border border-indigo-100">
+                          <AlertCircle className="w-4 h-4 text-indigo-500" />
+                          <span>ระบบลดเงินอัติโนมัติเมื่อตรงเงื่อนไข</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Copy Coupon code Box */}
-                    <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 justify-between">
-                      <div className="pl-2">
-                        <span className="text-[11px] font-extrabold text-slate-400 block uppercase tracking-wider leading-none mb-1">
-                          รหัสโปรโมชั่น
-                        </span>
-                        <span className="font-black text-lg text-slate-800 tracking-wider">
-                          {promo.code}
-                        </span>
+                    {/* Copy Box or Auto Promo box */}
+                    {isAutoPromo ? (
+                      <div className="flex items-center gap-2 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-3 justify-center text-indigo-800 text-xs font-black uppercase tracking-wider">
+                        ✨ แคมเปญนี้ร่วมรายการลดอัตโนมัติในตะกร้า ✨
                       </div>
-                      
-                      <button
-                        onClick={() => handleCopyCode(promo.code)}
-                        className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-md shadow-pink-50"
-                        title="คัดลอกโค้ดนี้"
-                      >
-                        <Copy className="w-4 h-4" />
-                        <span>คัดลอกโค้ด</span>
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 justify-between">
+                        <div className="pl-2">
+                          <span className="text-[11px] font-extrabold text-slate-400 block uppercase tracking-wider leading-none mb-1">
+                            รหัสโปรโมชั่น
+                          </span>
+                          <span className="font-black text-lg text-slate-800 tracking-wider">
+                            {promo.code}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => handleCopyCode(promo.code)}
+                          className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-md shadow-pink-50 text-sm"
+                          title="คัดลอกโค้ดนี้"
+                        >
+                          <Copy className="w-4 h-4" />
+                          <span>คัดลอกโค้ด</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -237,13 +327,14 @@ export const PromotionsPage: React.FC = () => {
       )}
 
       {/* Note warning footer */}
-      <div className="bg-slate-100 p-6 rounded-3xl border border-slate-200 flex items-start space-x-3 text-[15px] text-slate-600 leading-relaxed">
+      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex items-start space-x-3 text-[15px] text-slate-600 leading-relaxed shadow-xs">
         <AlertCircle className="w-5 h-5 text-slate-400 flex-shrink-0 mt-0.5" />
         <div>
-          <span className="font-bold text-slate-800">วิธีการใช้งานโค้ดโปรโมชั่น:</span>
-          <p className="mt-1">
-            ในขณะนี้ระบบสบายดีมาร์เก็ตกำลังพัฒนาช่องทางกรอกโค้ดส่วนลดเพิ่มเติมในหน้าตะกร้าสินค้า คุณลูกค้าสามารถนำรหัสโค้ดเหล่านี้แจ้งกับเจ้าหน้าที่ผู้จัดส่งสินค้าเพื่อหักส่วนลดตามเงื่อนไข ณ ตอนชำระเงินปลายทางได้ทันทีค่ะ
-          </p>
+          <span className="font-bold text-slate-800">วิธีการใช้งานโปรโมชั่น:</span>
+          <ul className="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>คูปองร้านค้า:</strong> กดคัดลอกรหัสและนำไปกรอกที่ช่องคูปองในหน้าตะกร้าสินค้าเพื่อรับส่วนลดเพิ่มเติม</li>
+            <li><strong>Flash Sale / Bundle Deal / Discount Campaign:</strong> ระบบจะคำนวณและลดราคาในรายการตะกร้าสินค้าของคุณโดยอัตโนมัติเมื่อสินค้าที่สั่งซื้อเข้าเงื่อนไขของแคมเปญนั้นๆ</li>
+          </ul>
         </div>
       </div>
 

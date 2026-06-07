@@ -42,3 +42,35 @@
 .animate-fade-in {
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+@keyframes floatHeart {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-80px) scale(1.4) rotate(-15deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-180px) scale(0.8) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+.animate-float-heart {
+  animation: floatHeart 1.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounceSubtle 2.5s ease-in-out infinite;
+}

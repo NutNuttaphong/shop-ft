@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { restfulApi, Product } from '../../../shared/services/api';
-import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw, Upload } from 'lucide-react';
 import { Pagination } from '../../../shared/components/ui/Pagination';
 
 export const ManageProductsPage: React.FC = () => {
@@ -34,6 +34,8 @@ export const ManageProductsPage: React.FC = () => {
   
   const [formError, setFormError] = useState<string | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -66,6 +68,7 @@ export const ManageProductsPage: React.FC = () => {
       imageUrl: '',
       description: ''
     });
+    setImagePreview(null);
     setFormError(null);
     setModalOpen(true);
   };
@@ -80,6 +83,7 @@ export const ManageProductsPage: React.FC = () => {
       imageUrl: product.imageUrl,
       description: product.description
     });
+    setImagePreview(product.imageUrl || null);
     setFormError(null);
     setModalOpen(true);
   };
@@ -102,6 +106,57 @@ export const ManageProductsPage: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setFormError('กรุณาเลือกไฟล์รูปภาพเท่านั้น (PNG, JPG, JPEG, WebP)');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setFormError('ขนาดรูปภาพต้องไม่เกิน 2MB เพื่อความรวดเร็วในการโหลด');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      setFormData(prev => ({ ...prev, imageUrl: base64String }));
+      setImagePreview(base64String);
+      setFormError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileChange(file);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileChange(file);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, imageUrl: '' }));
+    setImagePreview(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -406,18 +461,64 @@ export const ManageProductsPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload Zone */}
               <div>
-                <label className="block text-[16px] font-bold text-slate-700 mb-1">ลิงก์รูปภาพสินค้า (Image URL)</label>
-                <input
-                  type="text"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  placeholder="กรอก URL รูปภาพ เช่น https://images.unsplash.com/..."
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors"
-                />
-                <span className="text-xs text-slate-400 block mt-1">เว้นว่างไว้ได้ ระบบจะทำการเลือกรูปภาพตัวอย่างเริ่มต้นให้ทันที</span>
+                <label className="block text-[16px] font-bold text-slate-700 mb-2">รูปภาพสินค้า *</label>
+                
+                {imagePreview ? (
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 group aspect-video bg-slate-50 flex items-center justify-center">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-full max-w-full object-contain" 
+                    />
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                      <label className="cursor-pointer px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl text-sm transition-all shadow-md">
+                        เปลี่ยนรูปภาพ
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleFileInputChange} 
+                          className="hidden" 
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-xl text-sm transition-all shadow-md"
+                      >
+                        ลบรูปภาพ
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                      isDragging
+                        ? 'border-primary-500 bg-primary-50/50 scale-[0.98]'
+                        : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50/50'
+                    }`}
+                    onClick={() => document.getElementById('product-image-file')?.click()}
+                  >
+                    <input
+                      id="product-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
+                    <Upload className={`w-10 h-10 mb-3 transition-colors ${isDragging ? 'text-primary-600' : 'text-slate-400'}`} />
+                    <span className="font-bold text-slate-700 text-[16px] text-center">
+                      ลากไฟล์รูปภาพมาวางที่นี่ หรือ <span className="text-primary-600 hover:underline">คลิกเพื่อเลือกไฟล์</span>
+                    </span>
+                    <span className="text-[13px] text-slate-400 mt-1.5">
+                      รองรับไฟล์ PNG, JPG, JPEG, WebP (ขนาดไม่เกิน 2MB)
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

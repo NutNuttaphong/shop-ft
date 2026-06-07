@@ -4,6 +4,8 @@ import { MainLayout } from '../shared/components/layout/MainLayout';
 import { DashboardPage } from '../modules/dashboard/pages/DashboardPage';
 import { ManageProductsPage } from '../modules/products/pages/ManageProductsPage';
 import { ManagePromotionsPage } from '../modules/promotions/pages/ManagePromotionsPage';
+import { AnalyticsPage } from '../modules/dashboard/pages/AnalyticsPage';
+import { SocialCommercePage } from '../modules/dashboard/pages/SocialCommercePage';
 
 export const adminRoutes: RouteObject[] = [
   {
@@ -12,6 +14,16 @@ export const adminRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
           <DashboardPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/admin/analytics',
+    element: (
+      <RoleGuard allowedRoles={['admin']}>
+        <MainLayout>
+          <AnalyticsPage />
         </MainLayout>
       </RoleGuard>
     ),
@@ -32,6 +44,16 @@ export const adminRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
           <ManagePromotionsPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/admin/social',
+    element: (
+      <RoleGuard allowedRoles={['admin']}>
+        <MainLayout>
+          <SocialCommercePage />
         </MainLayout>
       </RoleGuard>
     ),

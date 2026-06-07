@@ -8,6 +8,7 @@ export interface OrderItem {
   quantity: number;
   imageUrl: string;
   category: string;
+  variant?: string | null;
 }
 
 export interface OrderData {
@@ -23,6 +24,13 @@ export interface OrderData {
   paymentMethod: 'cod' | 'qr';
   slipUploaded?: boolean;
   slipName?: string | null;
+  discount?: number;
+  autoDiscount?: number;
+  coinsUsed?: number;
+  promoCode?: string | null;
+  status?: string;
+  carrier?: string;
+  trackingNumber?: string;
 }
 
 interface BillProps {
@@ -71,6 +79,7 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
     }
   };
 
+  const subtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const vatAmount = (order.total * 7) / 107;
   const beforeVatAmount = order.total - vatAmount;
 
@@ -167,14 +176,14 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
           <div className="flex justify-center items-center gap-1.5">
             <Receipt className="w-5 h-5 text-primary-600 print:text-black" />
             <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
-              SHOP ONLINE
+              SABAIDEE MARKET
             </h1>
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-            บริษัท ช้อปออนไลน์ จำกัด (มหาชน)
+            บริษัท สบายดีมาร์เก็ต จำกัด (มหาชน)
           </p>
           <p className="text-[10px] text-slate-500 leading-normal max-w-[280px] mx-auto">
-            123 อาคารสยามพารากอน ชั้น 4 ถนนพระรามที่ 1 แขวงปทุมวัน เขตปทุมวัน กรุงเทพฯ 10330
+            123 อาคารสบายดี สวนหลวง กรุงเทพฯ 10250
           </p>
           <p className="text-[9px] text-slate-400 font-medium">
             เลขประจำตัวผู้เสียภาษี: 0105563001234
@@ -245,7 +254,14 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
             {order.items.map((item, idx) => (
               <div key={item.id} className="receipt-item text-xs">
                 <div className="flex justify-between font-extrabold text-slate-900 leading-tight">
-                  <span>{idx + 1}. {item.name}</span>
+                  <span>
+                    {idx + 1}. {item.name}
+                    {item.variant && (
+                      <span className="text-[10px] text-primary-600 block pl-3 font-semibold">
+                        ตัวเลือก: {item.variant}
+                      </span>
+                    )}
+                  </span>
                   <span>{(item.price * item.quantity).toLocaleString()} บาท</span>
                 </div>
                 <div className="text-[10px] text-slate-400 font-bold pl-3 flex justify-between pt-0.5">
@@ -261,8 +277,29 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
         <div className="space-y-1.5 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">
           <div className="flex justify-between">
             <span className="text-slate-500 font-semibold">ราคารวม (Subtotal):</span>
-            <span className="text-slate-800 font-bold">{order.total.toLocaleString()} บาท</span>
+            <span className="text-slate-800 font-bold">{subtotal.toLocaleString()} บาท</span>
           </div>
+
+          {order.autoDiscount && order.autoDiscount > 0 ? (
+            <div className="flex justify-between text-success-600 print:text-black">
+              <span className="font-semibold">ส่วนลดแคมเปญอัตโนมัติ:</span>
+              <span className="font-bold">-{order.autoDiscount.toLocaleString()} บาท</span>
+            </div>
+          ) : null}
+
+          {order.discount && order.discount > 0 ? (
+            <div className="flex justify-between text-success-600 print:text-black">
+              <span className="font-semibold">ส่วนลดคูปอง {order.promoCode ? `(${order.promoCode})` : ''}:</span>
+              <span className="font-bold">-{order.discount.toLocaleString()} บาท</span>
+            </div>
+          ) : null}
+
+          {order.coinsUsed && order.coinsUsed > 0 ? (
+            <div className="flex justify-between text-amber-600 print:text-black">
+              <span className="font-semibold">ส่วนลด First Shop Coins:</span>
+              <span className="font-bold">-{order.coinsUsed.toLocaleString()} บาท</span>
+            </div>
+          ) : null}
           
           <div className="flex justify-between text-slate-400 text-[10px]">
             <span>ภาษีมูลค่าเพิ่ม (VAT 7% Included):</span>

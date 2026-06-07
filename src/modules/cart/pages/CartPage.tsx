@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Trash2, Plus, Minus, CreditCard, ArrowLeft, HeartHandshake, MapPin, User, Phone, Truck, QrCode, AlertCircle, CheckCircle2, Printer } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { 
+  ShoppingBag, Trash2, Plus, Minus, CreditCard, ArrowLeft, 
+  HeartHandshake, MapPin, User, Phone, Truck, QrCode, 
+  AlertCircle, CheckCircle2, Printer 
+} from 'lucide-react';
 import Bill from './Bill';
 import { useAuth } from '../../auth/hooks/useAuth';
-import { restfulApi } from '../../../shared/services/api';
+import { restfulApi, Promotion } from '../../../shared/services/api';
 
 interface CartItem {
   productId: string;
@@ -13,12 +17,17 @@ interface CartItem {
   imageUrl: string;
   stock: number;
   category: string;
+  variant?: string;
 }
 
 export const CartPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Search parameters for Buy Now
+  const [searchParams] = useSearchParams();
+  const isBuyNow = searchParams.get('buyNow') === 'true';
+
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +46,49 @@ export const CartPage: React.FC = () => {
     address?: string;
   }>({});
 
+  // Coupon states
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponSuccess, setCouponSuccess] = useState(false);
+
+  // Coins states
+  const [userCoins, setUserCoins] = useState(150); // defaults to 150 coins
+  const [useCoins, setUseCoins] = useState(false);
+
+  // Promotions states
+  const [activePromotions, setActivePromotions] = useState<Promotion[]>([]);
+
+  // Load active promotions
+  useEffect(() => {
+    const fetchActivePromotions = async () => {
+      try {
+        const res = await restfulApi.get<Promotion[]>('/api/promotions');
+        if (res.data) {
+          setActivePromotions(res.data.filter(p => p.isActive));
+        }
+      } catch (err) {
+        console.error('Failed to load active promotions:', err);
+      }
+    };
+    fetchActivePromotions();
+  }, []);
+
+  // Load coins from localStorage
+  useEffect(() => {
+    if (user) {
+      const storedCoins = localStorage.getItem(`app_user_coins_${user.username}`);
+      if (storedCoins) {
+        setUserCoins(Number(storedCoins));
+      } else {
+        localStorage.setItem(`app_user_coins_${user.username}`, '150');
+        setUserCoins(150);
+      }
+    }
+  }, [user]);
+
+  // Sync profile details
   useEffect(() => {
     if (user) {
       if (user.displayName) {
@@ -52,23 +104,38 @@ export const CartPage: React.FC = () => {
     }
   }, [user]);
 
+  // Load Cart or Buy Now item
   const loadCart = async () => {
-    try {
-      const res = await restfulApi.get<CartItem[]>('/api/cart');
-      if (res.data) {
-        setCartItems(res.data);
-      } else {
+    if (isBuyNow) {
+      try {
+        const itemStr = localStorage.getItem('app_buynow_item');
+        if (itemStr) {
+          setCartItems([JSON.parse(itemStr)]);
+        } else {
+          setCartItems([]);
+        }
+      } catch {
         setCartItems([]);
       }
-    } catch {
-      setCartItems([]);
+    } else {
+      try {
+        const res = await restfulApi.get<CartItem[]>('/api/cart');
+        if (res.data) {
+          setCartItems(res.data);
+        } else {
+          setCartItems([]);
+        }
+      } catch {
+        setCartItems([]);
+      }
     }
   };
 
   useEffect(() => {
     loadCart();
-  }, []);
+  }, [isBuyNow]);
 
+  // Auto print receipt
   useEffect(() => {
     if (checkoutSuccess) {
       const timer = setTimeout(() => {
@@ -89,19 +156,33 @@ export const CartPage: React.FC = () => {
     }
     if (nextQty < 1) return;
 
-    const res = await restfulApi.put<CartItem[]>(`/api/cart/${productId}?quantity=${nextQty}`, {});
-    if (res.data) {
-      setCartItems(res.data);
+    if (isBuyNow) {
+      const updatedItem = { ...item, quantity: nextQty };
+      localStorage.setItem('app_buynow_item', JSON.stringify(updatedItem));
+      setCartItems([updatedItem]);
+    } else {
+      const variantQS = item.variant ? `&variant=${encodeURIComponent(item.variant)}` : '';
+      const res = await restfulApi.put<CartItem[]>(`/api/cart/${productId}?quantity=${nextQty}${variantQS}`, {});
+      if (res.data) {
+        setCartItems(res.data);
+      }
+      window.dispatchEvent(new Event('cart-updated'));
     }
-    window.dispatchEvent(new Event('cart-updated'));
   };
 
   const removeItem = async (productId: string) => {
-    const res = await restfulApi.delete<CartItem[]>(`/api/cart/${productId}`);
-    if (res.data) {
-      setCartItems(res.data);
+    if (isBuyNow) {
+      localStorage.removeItem('app_buynow_item');
+      setCartItems([]);
+    } else {
+      const item = cartItems.find(i => i.productId === productId);
+      const variantQS = item && item.variant ? `?variant=${encodeURIComponent(item.variant)}` : '';
+      const res = await restfulApi.delete<CartItem[]>(`/api/cart/${productId}${variantQS}`);
+      if (res.data) {
+        setCartItems(res.data);
+      }
+      window.dispatchEvent(new Event('cart-updated'));
     }
-    window.dispatchEvent(new Event('cart-updated'));
   };
 
   const validateForm = () => {
@@ -142,14 +223,23 @@ export const CartPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const res = await restfulApi.post<any>('/api/orders/checkout', {
+      const payload: any = {
         customerName: customerName,
         customerPhone: customerPhone,
         customerAddress: customerAddress,
         paymentMethod: paymentMethod === 'cod' ? 'COD' : 'QR',
         slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
         slipName: uploadedSlipName || null,
-      });
+        promoCode: appliedPromoCode || null,
+        discount: discountAmount + autoDiscountAmount,
+        coinsUsed: useCoins ? coinsToUse : 0
+      };
+
+      if (isBuyNow) {
+        payload.items = cartItems;
+      }
+
+      const res = await restfulApi.post<any>('/api/orders/checkout', payload);
 
       if (res.error) {
         alert(`เกิดข้อผิดพลาด: ${res.error}`);
@@ -170,8 +260,13 @@ export const CartPage: React.FC = () => {
           quantity: item.quantity,
           imageUrl: item.imageUrl,
           category: item.category,
+          variant: item.variant || null
         })),
         total: order.total,
+        discount: discountAmount,
+        autoDiscount: autoDiscountAmount,
+        coinsUsed: useCoins ? coinsToUse : 0,
+        promoCode: appliedPromoCode || null,
         customer: {
           name: customerName,
           phone: customerPhone,
@@ -181,6 +276,7 @@ export const CartPage: React.FC = () => {
         slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
         slipName: uploadedSlipName || null
       };
+      
       localStorage.setItem('app_last_order', JSON.stringify(orderData));
 
       // Save to order history list
@@ -192,9 +288,21 @@ export const CartPage: React.FC = () => {
         console.error('Failed to save to order history', e);
       }
 
-      // Clear cart
+      // Deduct used coins and reward +10 coins for successful purchase
+      if (user) {
+        const currentCoins = Number(localStorage.getItem(`app_user_coins_${user.username}`) || '150');
+        const nextCoins = currentCoins - (useCoins ? coinsToUse : 0) + 10;
+        localStorage.setItem(`app_user_coins_${user.username}`, nextCoins.toString());
+      }
+
+      // Clear states
+      if (isBuyNow) {
+        localStorage.removeItem('app_buynow_item');
+      }
       setCartItems([]);
       window.dispatchEvent(new Event('cart-updated'));
+      window.dispatchEvent(new Event('coins-updated'));
+      localStorage.removeItem('app_applied_coupon');
       
       setIsSubmitting(false);
       setCheckoutSuccess(true);
@@ -206,6 +314,137 @@ export const CartPage: React.FC = () => {
   };
 
   const grandTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // Automatic promotions logic
+  const calculateAutoPromotions = (items: CartItem[], promotionsList: Promotion[]) => {
+    let autoDisc = 0;
+    
+    items.forEach(item => {
+      // 1. Flash Sale
+      const flashSales = promotionsList.filter(p => p.type === 'FLASH_SALE' && p.productIds?.includes(item.productId));
+      if (flashSales.length > 0) {
+        const sale = flashSales[0];
+        const isPercent = sale.discountType === 'PERCENTAGE' || sale.discountType === 'percentage';
+        if (isPercent) {
+          autoDisc += Math.round(item.price * item.quantity * (sale.discountValue / 100));
+        } else {
+          autoDisc += sale.discountValue * item.quantity;
+        }
+        return;
+      }
+
+      // 2. Bundle Deal
+      const bundleDeals = promotionsList.filter(p => p.type === 'BUNDLE_DEAL' && p.productIds?.includes(item.productId));
+      if (bundleDeals.length > 0) {
+        const deal = bundleDeals[0];
+        const minQty = deal.bundleQty || 2;
+        if (item.quantity >= minQty) {
+          const isPercent = deal.discountType === 'PERCENTAGE' || deal.discountType === 'percentage';
+          if (isPercent) {
+            autoDisc += Math.round(item.price * item.quantity * (deal.discountValue / 100));
+          } else {
+            autoDisc += deal.discountValue * item.quantity;
+          }
+          return;
+        }
+      }
+
+      // 3. Discount Campaign
+      const campaigns = promotionsList.filter(p => p.type === 'DISCOUNT_CAMPAIGN' && p.targetCategory === item.category);
+      if (campaigns.length > 0) {
+        const camp = campaigns[0];
+        const isPercent = camp.discountType === 'PERCENTAGE' || camp.discountType === 'percentage';
+        if (isPercent) {
+          autoDisc += Math.round(item.price * item.quantity * (camp.discountValue / 100));
+        } else {
+          autoDisc += camp.discountValue * item.quantity;
+        }
+      }
+    });
+
+    return autoDisc;
+  };
+
+  const autoDiscountAmount = calculateAutoPromotions(cartItems, activePromotions);
+
+  // Re-evaluate Coupon when totals change
+  useEffect(() => {
+    if (appliedPromoCode && cartItems.length > 0) {
+      const storedCoupon = localStorage.getItem('app_applied_coupon');
+      if (storedCoupon) {
+        const promo = JSON.parse(storedCoupon);
+        if (grandTotal < promo.minPurchase) {
+          setAppliedPromoCode(null);
+          setDiscountAmount(0);
+          setCouponSuccess(false);
+          setCouponError('ยอดสินค้าในตะกร้าลดลงต่ำกว่าเกณฑ์ขั้นต่ำสำหรับคูปองนี้แล้วค่ะ');
+          localStorage.removeItem('app_applied_coupon');
+        } else {
+          let disc = 0;
+          if (promo.discountType === 'percentage' || promo.discountType === 'PERCENTAGE') {
+            disc = Math.round(grandTotal * (promo.discountValue / 100));
+          } else {
+            disc = promo.discountValue;
+          }
+          setDiscountAmount(disc);
+        }
+      }
+    }
+  }, [grandTotal, cartItems, appliedPromoCode]);
+
+  const discountedTotal = Math.max(0, grandTotal - autoDiscountAmount - discountAmount);
+  
+  // Shop Coins to use: max 25% of discounted total, or userCoins, whichever is less
+  const coinsToUse = Math.min(Math.floor(discountedTotal * 0.25), userCoins);
+  const finalTotal = Math.max(0, discountedTotal - (useCoins ? coinsToUse : 0));
+
+  const handleApplyCoupon = async () => {
+    setCouponError(null);
+    setCouponSuccess(false);
+
+    const code = promoCodeInput.trim().toUpperCase();
+    if (!code) {
+      setCouponError('กรุณากรอกรหัสคูปองค่ะ');
+      return;
+    }
+
+    try {
+      const res = await restfulApi.get<any>(`/api/promotions/validate/${code}`);
+      if (res.error) {
+        setCouponError(res.error);
+        return;
+      }
+
+      const promo = res.data;
+      if (grandTotal < promo.minPurchase) {
+        setCouponError(`ยอดสั่งซื้อขั้นต่ำต้องครบ ${promo.minPurchase} บาท ถึงจะใช้คูปองนี้ได้ค่ะ (ปัจจุบันมี ${grandTotal} บาท)`);
+        return;
+      }
+
+      let disc = 0;
+      if (promo.discountType === 'percentage' || promo.discountType === 'PERCENTAGE') {
+        disc = Math.round(grandTotal * (promo.discountValue / 100));
+      } else {
+        disc = promo.discountValue;
+      }
+
+      setDiscountAmount(disc);
+      setAppliedPromoCode(code);
+      setCouponSuccess(true);
+      setPromoCodeInput('');
+      localStorage.setItem('app_applied_coupon', JSON.stringify(promo));
+    } catch {
+      setCouponError('รหัสคูปองไม่ถูกต้อง หรือเชื่อมต่อเซิร์ฟเวอร์ไม่ได้ค่ะ');
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedPromoCode(null);
+    setDiscountAmount(0);
+    setCouponSuccess(false);
+    setPromoCodeInput('');
+    localStorage.removeItem('app_applied_coupon');
+  };
 
   if (checkoutSuccess) {
     return (
@@ -253,8 +492,14 @@ export const CartPage: React.FC = () => {
       {/* Title block */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold text-slate-900">ตะกร้าสินค้าของฉัน</h1>
-          <p className="text-slate-500 text-[16px]">ตรวจสอบรายการสินค้าที่คุณเลือกซื้อและยืนยันการทำรายการ</p>
+          <h1 className="text-3xl font-extrabold text-slate-900">
+            {isBuyNow ? 'ซื้อสินค้าทันที' : 'ตะกร้าสินค้าของฉัน'}
+          </h1>
+          <p className="text-slate-500 text-[16px]">
+            {isBuyNow 
+              ? 'คุณกำลังทำการสั่งซื้อสินค้าแบบซื้อทันที กรอกข้อมูลและชำระเงินเพื่อทำรายการ' 
+              : 'ตรวจสอบรายการสินค้าที่คุณเลือกซื้อและยืนยันการทำรายการ'}
+          </p>
         </div>
         
         <button
@@ -270,9 +515,9 @@ export const CartPage: React.FC = () => {
           <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShoppingBag className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">ตะกร้าสินค้าของคุณว่างเปล่า</h3>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">ไม่มีสินค้าที่กำลังเช็คเอาต์</h3>
           <p className="text-slate-500 mb-6 text-[16px]">
-            คุณยังไม่ได้เลือกเพิ่มสินค้าใดๆ ลงในตะกร้าสินค้าเลยค่ะ
+            คุณยังไม่มีรายการใดๆ ที่เลือกไว้เลยค่ะ
           </p>
           <button
             onClick={() => navigate('/products')}
@@ -288,7 +533,7 @@ export const CartPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
               <div
-                key={item.productId}
+                key={item.productId + (item.variant ? '-' + item.variant : '')}
                 className="bg-white border border-slate-200 rounded-3xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow"
               >
                 {/* Info block */}
@@ -469,7 +714,7 @@ export const CartPage: React.FC = () => {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 font-extrabold text-[16px] text-slate-900">
                         <Truck className="w-4 h-4 text-primary-600" />
-                        <span>ชำระเงินปลายทาง (COD)</span>
+                        <span>เก็บเงินปลายทาง (COD)</span>
                       </div>
                       <p className="text-xs text-slate-500 leading-normal font-medium">
                         ชำระค่าสินค้าด้วยเงินสดหรือโอนให้กับพนักงานขนส่งเมื่อของถึงมือ
@@ -503,7 +748,7 @@ export const CartPage: React.FC = () => {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 font-extrabold text-[16px] text-slate-900">
                         <QrCode className="w-4 h-4 text-primary-600" />
-                        <span>ชำระผ่าน QR Code</span>
+                        <span>ชำระผ่าน QR Code / PromptPay</span>
                       </div>
                       <p className="text-xs text-slate-500 leading-normal font-medium">
                         สแกน PromptPay QR Code เพื่อชำระเงินผ่านแอปธนาคารได้ทันที
@@ -521,13 +766,101 @@ export const CartPage: React.FC = () => {
               สรุปคำสั่งซื้อ
             </h2>
 
-            <div className="space-y-4 text-[16px]">
+            {/* Coupon Code Block */}
+            <div className="space-y-2.5">
+              <span className="text-[14px] font-bold text-slate-700 block">คูปองส่วนลด</span>
+              
+              {appliedPromoCode ? (
+                <div className="flex items-center justify-between p-3 bg-success-50 rounded-2xl border border-success-200">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-success-800 uppercase block">ใช้โค้ดสำเร็จ</span>
+                    <span className="text-sm font-black text-slate-900 block truncate">{appliedPromoCode} (-{discountAmount} บาท)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-xs text-danger-600 hover:text-danger-700 font-extrabold focus:outline-none flex-shrink-0 ml-2"
+                  >
+                    ลบออก
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="ใส่รหัสคูปอง เช่น SABAIDEE10"
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value)}
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 placeholder-slate-400 font-semibold uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    className="px-4 py-2 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors focus:outline-none"
+                  >
+                    ใช้โค้ด
+                  </button>
+                </div>
+              )}
+              {couponError && <p className="text-xs text-danger-600 font-bold">{couponError}</p>}
+              {couponSuccess && <p className="text-xs text-success-600 font-bold">ใช้คูปองส่วนลดสำเร็จแล้วค่ะ!</p>}
+            </div>
+
+            {/* Shop Coins Block */}
+            {user && (
+              <div className="space-y-2.5 border-t border-slate-100 pt-4">
+                <label className="flex items-center justify-between cursor-pointer select-none">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={useCoins}
+                      disabled={coinsToUse <= 0}
+                      onChange={(e) => setUseCoins(e.target.checked)}
+                      className="rounded text-primary-600 focus:ring-primary-500 w-5 h-5 border-2 border-slate-300 disabled:opacity-30"
+                    />
+                    <div className="text-left">
+                      <span className={`text-[15px] font-bold block ${coinsToUse <= 0 ? 'text-slate-400' : 'text-slate-700'}`}>
+                        ใช้ First Shop Coins
+                      </span>
+                      <span className="text-xs text-slate-400 font-semibold block">
+                        มีอยู่ {userCoins} Coins (ใช้ได้ลดสูงสุด {coinsToUse} บาท)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black text-amber-500">🪙</span>
+                </label>
+              </div>
+            )}
+
+            <div className="space-y-4 text-[16px] border-t border-slate-100 pt-4">
               <div className="flex justify-between text-slate-500">
-                <span>จำนวนสินค้าทั้งหมด</span>
+                <span>ราคารวมสินค้า (Subtotal)</span>
                 <span className="font-bold text-slate-800">
-                  {cartItems.reduce((sum, item) => sum + item.quantity, 0)} ชิ้น
+                  {grandTotal.toLocaleString()} บาท
                 </span>
               </div>
+
+              {autoDiscountAmount > 0 && (
+                <div className="flex justify-between text-success-600 font-bold">
+                  <span>ส่วนลดแคมเปญ / Flash Sale อัตโนมัติ</span>
+                  <span>-{autoDiscountAmount.toLocaleString()} บาท</span>
+                </div>
+              )}
+              
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-success-600 font-bold">
+                  <span>ส่วนลดคูปอง ({appliedPromoCode})</span>
+                  <span>-{discountAmount.toLocaleString()} บาท</span>
+                </div>
+              )}
+
+              {useCoins && coinsToUse > 0 && (
+                <div className="flex justify-between text-amber-600 font-bold">
+                  <span>ส่วนลด First Shop Coins</span>
+                  <span>-{coinsToUse.toLocaleString()} บาท</span>
+                </div>
+              )}
+
               <div className="flex justify-between text-slate-500">
                 <span>ค่าจัดส่งสินค้า</span>
                 <span className="font-bold text-success-600">จัดส่งฟรี (โปรโมชั่น)</span>
@@ -536,7 +869,7 @@ export const CartPage: React.FC = () => {
               <div className="border-t border-dashed border-slate-200 pt-4 flex justify-between items-baseline">
                 <span className="text-lg font-bold text-slate-900">ยอดเงินรวมทั้งสิ้น</span>
                 <span className="text-3xl font-black text-primary-600">
-                  {grandTotal.toLocaleString()} <span className="text-sm font-bold text-slate-500">บาท</span>
+                  {finalTotal.toLocaleString()} <span className="text-sm font-bold text-slate-500">บาท</span>
                 </span>
               </div>
             </div>
@@ -597,7 +930,7 @@ export const CartPage: React.FC = () => {
               <div className="text-center space-y-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">ยอดชำระเงินที่ต้องสแกน</span>
                 <div className="text-3xl font-black text-primary-600">
-                  {grandTotal.toLocaleString()} <span className="text-lg font-bold text-slate-500">บาท</span>
+                  {finalTotal.toLocaleString()} <span className="text-lg font-bold text-slate-500">บาท</span>
                 </div>
               </div>
 
@@ -629,7 +962,7 @@ export const CartPage: React.FC = () => {
                   <rect x="225" y="115" width="40" height="40" rx="4" />
                   <rect x="233" y="123" width="24" height="24" rx="2" fill="#ffffff" />
                   <rect x="239" y="129" width="12" height="12" rx="1" />
-
+ 
                   {/* Bottom-Left Finder */}
                   <rect x="55" y="285" width="40" height="40" rx="4" />
                   <rect x="63" y="293" width="24" height="24" rx="2" fill="#ffffff" />
@@ -658,7 +991,7 @@ export const CartPage: React.FC = () => {
                   <rect x="215" y="155" width="10" height="30" />
                   <rect x="235" y="165" width="30" height="10" />
                   <rect x="245" y="185" width="20" height="20" />
-
+ 
                   <rect x="55" y="165" width="20" height="10" />
                   <rect x="85" y="165" width="10" height="30" />
                   
@@ -668,7 +1001,7 @@ export const CartPage: React.FC = () => {
                   <rect x="145" y="185" width="10" height="20" />
                   <rect x="165" y="185" width="40" height="10" />
                   <rect x="215" y="195" width="20" height="10" />
-
+ 
                   {/* Logo Center Card */}
                   <rect x="135" y="195" width="50" height="50" rx="8" fill="#003566" />
                   <circle cx="160" cy="220" r="14" fill="#ffffff" />
@@ -688,7 +1021,7 @@ export const CartPage: React.FC = () => {
                   <rect x="195" y="235" width="10" height="25" />
                   <rect x="215" y="235" width="20" height="10" />
                   <rect x="245" y="245" width="10" height="30" />
-
+ 
                   <rect x="105" y="265" width="20" height="10" />
                   <rect x="135" y="265" width="10" height="10" />
                   <rect x="155" y="255" width="30" height="10" />
@@ -713,7 +1046,7 @@ export const CartPage: React.FC = () => {
                   ชื่อบัญชี: บจก. ช้อปออนไลน์ (Shop Online Co., Ltd.)
                 </text>
                 <text x="160" y="382" fill="#64748b" fontSize="11" textAnchor="middle" fontFamily="sans-serif">
-                  สแกนเพื่อชำระเงินจำนวน {grandTotal.toLocaleString()} บาท
+                  สแกนเพื่อชำระเงินจำนวน {finalTotal.toLocaleString()} บาท
                 </text>
               </svg>
 
