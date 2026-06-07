@@ -13,8 +13,6 @@ import {
   toggleFollowShop,
   getShopFollowerCount,
   getProductMedia,
-  getProductReviews,
-  submitProductReview,
   getAverageRating,
   getVariantsForProduct,
   Review,
@@ -180,7 +178,8 @@ export const CatalogPage: React.FC = () => {
           reviewerName: r.username || 'ผู้ซื้อทั่วไป',
           rating: r.rating,
           comment: r.comment,
-          date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('th-TH') : 'ไม่ระบุวันที่'
+          date: r.createdAt ? new Date(r.createdAt).toLocaleDateString('th-TH') : 'ไม่ระบุวันที่',
+          helpfulCount: 0
         })));
         
         // Calculate average rating and distribution

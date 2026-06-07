@@ -8,7 +8,8 @@ import {
   ShoppingCart, 
   DollarSign,
   Send,
-  MessageSquare
+  MessageSquare,
+  X
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {

@@ -14,9 +14,6 @@ import {
   Plus, 
   X, 
   ShoppingBag, 
-  Calendar, 
-  ChevronRight, 
-  Share2, 
   Check, 
   Sparkles,
   Volume2,
@@ -88,7 +85,7 @@ export const SocialCommercePage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 2. Shopee Live States
-  const [streams, setStreams] = useState<LiveStream[]>([]);
+  const [, setStreams] = useState<LiveStream[]>([]);
   const [activeStream, setActiveStream] = useState<LiveStream | null>(null);
   const [liveTitle, setLiveTitle] = useState('');
   const [selectedLiveProducts, setSelectedLiveProducts] = useState<string[]>([]);
@@ -102,7 +99,7 @@ export const SocialCommercePage: React.FC = () => {
   const [videos, setVideos] = useState<ShopeeVideo[]>([]);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [newVideoTitle, setNewVideoTitle] = useState('');
-  const [newVideoUrl, setNewVideoUrl] = useState('https://assets.mixkit.co/videos/preview/mixkit-grocery-shopping-in-the-supermarket-41584-large.mp4');
+  const [newVideoUrl] = useState('https://assets.mixkit.co/videos/preview/mixkit-grocery-shopping-in-the-supermarket-41584-large.mp4');
   const [newVideoProductId, setNewVideoProductId] = useState('');
 
   // 4. Followers & Broadcast States
@@ -114,7 +111,7 @@ export const SocialCommercePage: React.FC = () => {
   const [feeds, setFeeds] = useState<FeedPost[]>([]);
   const [isFeedModalOpen, setIsFeedModalOpen] = useState(false);
   const [newFeedCaption, setNewFeedCaption] = useState('');
-  const [newFeedImageUrl, setNewFeedImageUrl] = useState('https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=600&q=80');
+  const [newFeedImageUrl] = useState('https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=600&q=80');
   const [newFeedProductId, setNewFeedProductId] = useState('');
 
   // Fetch Base Data
@@ -243,7 +240,7 @@ export const SocialCommercePage: React.FC = () => {
 
   // Live streaming simulator ticker (viewer comments & viewers count)
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: any;
     if (activeStream) {
       interval = setInterval(async () => {
         // 1. Generate visitor comments
@@ -576,6 +573,10 @@ export const SocialCommercePage: React.FC = () => {
                       <span className="bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg font-extrabold flex items-center gap-1">
                         <Eye className="w-3 h-3 text-slate-350" />
                         {activeStream.viewerCount} คนดู
+                      </span>
+                      <span className="bg-black/60 text-white text-[10px] px-2 py-1 rounded-lg font-extrabold flex items-center gap-1">
+                        <Heart className="w-3 h-3 text-pink-500 fill-pink-500" />
+                        {liveHeartCount} ถูกใจ
                       </span>
                     </div>
 

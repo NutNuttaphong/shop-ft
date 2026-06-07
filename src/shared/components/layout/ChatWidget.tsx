@@ -22,7 +22,7 @@ export const ChatWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // If user is Admin or not logged in, don't show the chat widget
-  if (!user || user.role === 'ADMIN') {
+  if (!user || user.role === 'admin') {
     return null;
   }
 
