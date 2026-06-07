@@ -31,6 +31,12 @@ export interface OrderData {
   status?: string;
   carrier?: string;
   trackingNumber?: string;
+  id?: string;
+  disputeOpened?: boolean;
+  disputeReason?: string | null;
+  disputeStatus?: string | null;
+  returnReason?: string | null;
+  returnDescription?: string | null;
 }
 
 interface BillProps {

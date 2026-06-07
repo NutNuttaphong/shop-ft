@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   History, Search, Calendar, CreditCard, Truck, ShoppingBag, 
   Printer, RotateCcw, Copy, Check, X, AlertCircle, Eye, 
-  Package, CheckCircle2, XCircle 
+  Package, CheckCircle2, XCircle, Star
 } from 'lucide-react';
 import Bill, { OrderData, OrderItem } from './Bill';
 import { restfulApi } from '../../../shared/services/api';
