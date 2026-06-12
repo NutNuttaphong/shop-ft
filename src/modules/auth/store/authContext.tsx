@@ -1,13 +1,14 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { UserSession } from '../../../role/roles';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 interface AuthContextType {
   user: UserSession | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'user'; error?: string }>;
+  register: (username: string, password: string, displayName: string, phone?: string, address?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (displayName: string, phone?: string, address?: string) => void;
 }
@@ -74,6 +75,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (
+    username: string, 
+    password: string, 
+    displayName: string, 
+    phone?: string, 
+    address?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    setIsLoading(true);
+
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+    const cleanDisplayName = displayName.trim();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: cleanUsername, 
+          password: cleanPassword, 
+          displayName: cleanDisplayName,
+          phone: phone ? phone.trim() : undefined,
+          address: address ? address.trim() : undefined
+        }),
+      });
+
+      const json = await response.json();
+
+      if (!response.ok || !json.success) {
+        setIsLoading(false);
+        return { success: false, error: json.message || 'การสมัครสมาชิกล้มเหลว กรุณาตรวจสอบข้อมูลอีกครั้ง' };
+      }
+
+      const data = json.data;
+      const session: UserSession = {
+        username: data.username,
+        role: data.role.toLowerCase() as 'admin' | 'user',
+        displayName: data.displayName || data.username,
+        token: data.token,
+        phone: data.phone,
+        address: data.address,
+      };
+
+      setUser(session);
+      localStorage.setItem('app_auth_session', JSON.stringify(session));
+      setIsLoading(false);
+      return { success: true };
+    } catch (err: any) {
+      setIsLoading(false);
+      return {
+        success: false,
+        error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่',
+      };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('app_auth_session');
@@ -121,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -3,7 +3,7 @@
  * Connects to the real Spring Boot backend at localhost:8080
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -60,7 +60,9 @@ export function getToken(): string | null {
       const parsed = JSON.parse(session);
       return parsed.token || null;
     }
-  } catch {}
+  } catch {
+    // Ignore JSON parse or localStorage access errors
+  }
   return null;
 }
 

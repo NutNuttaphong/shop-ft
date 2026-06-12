@@ -143,21 +143,27 @@ export const SocialCommercePage: React.FC = () => {
           setLiveHeartCount(streaming.likeCount);
         }
       }
-    } catch {}
+    } catch {
+      // Ignore errors when fetching live streams
+    }
   };
 
   const fetchVideos = async () => {
     try {
       const res = await restfulApi.get<ShopeeVideo[]>('/api/social/videos');
       if (res.data) setVideos(res.data);
-    } catch {}
+    } catch {
+      // Ignore errors when fetching videos
+    }
   };
 
   const fetchFeeds = async () => {
     try {
       const res = await restfulApi.get<FeedPost[]>('/api/social/feed');
       if (res.data) setFeeds(res.data);
-    } catch {}
+    } catch {
+      // Ignore errors when fetching feeds
+    }
   };
 
   useEffect(() => {
@@ -170,14 +176,18 @@ export const SocialCommercePage: React.FC = () => {
     try {
       const res = await restfulApi.get<string[]>('/api/chat/contacts');
       if (res.data) setContacts(res.data);
-    } catch {}
+    } catch {
+      // Ignore errors when fetching contacts
+    }
   };
 
   const fetchChatHistory = async (contact: string) => {
     try {
       const res = await restfulApi.get<any[]>(`/api/chat/history?contact=${contact}`);
       if (res.data) setChatMessages(res.data);
-    } catch {}
+    } catch {
+      // Ignore errors when fetching chat history
+    }
   };
 
   useEffect(() => {
@@ -233,7 +243,9 @@ export const SocialCommercePage: React.FC = () => {
       if (res.data) {
         setChatMessages(prev => [...prev, res.data]);
       }
-    } catch {}
+    } catch {
+      // Ignore errors when sending chat message
+    }
   };
 
   // --- 2. SHOPEE LIVE LOGIC ---
@@ -257,7 +269,9 @@ export const SocialCommercePage: React.FC = () => {
             setActiveStream(res.data);
             setLiveHeartCount(res.data.likeCount);
           }
-        } catch {}
+        } catch {
+          // Ignore interaction broadcast errors
+        }
       }, 3500);
     }
     return () => clearInterval(interval);
@@ -279,7 +293,9 @@ export const SocialCommercePage: React.FC = () => {
         setLiveComments([{ sender: 'ระบบไลฟ์สด', message: 'เริ่มต้นการจำลองไลฟ์สดเรียบร้อยแล้ว ยินดีต้อนรับผู้ชมทุกท่านค่ะ! 🎥✨' }]);
         fetchLiveStreams();
       }
-    } catch {}
+    } catch {
+      // Ignore live startup errors
+    }
   };
 
   const handleStopLive = async () => {
@@ -292,7 +308,9 @@ export const SocialCommercePage: React.FC = () => {
         setLiveComments([]);
         fetchLiveStreams();
       }
-    } catch {}
+    } catch {
+      // Ignore live shutdown errors
+    }
   };
 
   const handlePinLiveProduct = async (prodId: string) => {
@@ -308,7 +326,9 @@ export const SocialCommercePage: React.FC = () => {
           setLiveComments(prev => [...prev, { sender: 'แม่ค้าไลฟ์สด 📢', message: `ปักหมุดสินค้าพิเศษ: ${prod?.name || ''} ช้อปด่วนคุ้มค่าสุดๆ!` }]);
         }
       }
-    } catch {}
+    } catch {
+      // Ignore pinning errors
+    }
   };
 
   const handleAdminHeartClick = async () => {
@@ -326,7 +346,9 @@ export const SocialCommercePage: React.FC = () => {
         setActiveStream(res.data);
         setLiveHeartCount(res.data.likeCount);
       }
-    } catch {}
+    } catch {
+      // Ignore heart click broadcast errors
+    }
   };
 
   // --- 3. SHOPEE VIDEO LOGIC ---
@@ -345,7 +367,9 @@ export const SocialCommercePage: React.FC = () => {
         setIsVideoModalOpen(false);
         fetchVideos();
       }
-    } catch {}
+    } catch {
+      // Ignore video creation errors
+    }
   };
 
   // --- 4. FOLLOWERS & BROADCAST ---
@@ -374,14 +398,18 @@ export const SocialCommercePage: React.FC = () => {
         setIsFeedModalOpen(false);
         fetchFeeds();
       }
-    } catch {}
+    } catch {
+      // Ignore feed creation errors
+    }
   };
 
   const handleLikeFeed = async (feedId: string) => {
     try {
       const res = await restfulApi.put<FeedPost>(`/api/social/feed/${feedId}/like`, {});
       if (res.data) fetchFeeds();
-    } catch {}
+    } catch {
+      // Ignore feed like errors
+    }
   };
 
   return (
