@@ -3,7 +3,10 @@
  * Connects to the real Spring Boot backend at localhost:8080
  */
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+const rawEnvUrl = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = (rawEnvUrl && rawEnvUrl !== 'undefined' && rawEnvUrl !== 'null') 
+  ? rawEnvUrl 
+  : '';
 
 export interface ApiResponse<T> {
   data: T | null;
