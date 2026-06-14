@@ -19,7 +19,8 @@ import {
   Gift,
   History,
   BarChart3,
-  Radio
+  Radio,
+  Newspaper
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -73,6 +74,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/admin/social', label: 'โซเชียลมีเดีย', icon: Radio },
         { path: '/admin/products', label: 'จัดการรายการสินค้า', icon: PackageCheck },
         { path: '/admin/promotions', label: 'การจัดการโปรโมชั่น', icon: Tag },
+        { path: '/admin/news', label: 'การจัดการข่าวสาร', icon: Newspaper },
       ]
     : [
         { path: '/products', label: 'ร้านค้าสั่งซื้อสินค้า', icon: ShoppingBag },
