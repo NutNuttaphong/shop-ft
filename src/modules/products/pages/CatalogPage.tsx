@@ -53,7 +53,7 @@ export const CatalogPage: React.FC = () => {
   
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8; // Increased items per page to feel like a premium catalog
+  const itemsPerPage = 40; // Set to 40 items per page as requested
   
   // Notification State
   const [addedItem, setAddedItem] = useState<string | null>(null);
@@ -481,160 +481,185 @@ export const CatalogPage: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Categories Tabs */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-          <span className="text-slate-500 font-bold text-sm mr-1 flex items-center gap-1">
-            <Filter className="w-4 h-4" /> หมวดหมู่สินค้า:
-          </span>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-[15px] font-bold transition-all ${
-                selectedCategory === cat
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Main product display */}
-      {loading ? (
-        <div className="py-20 flex flex-col justify-center items-center">
-          <div className="w-14 h-14 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="mt-4 text-slate-500 font-medium">กำลังเตรียมโหลดรายการสินค้าจากร้านค้า...</span>
-        </div>
-      ) : error ? (
-        <div className="bg-danger-50 border-l-4 border-danger-500 p-6 rounded-r-3xl text-center">
-          <p className="text-danger-700 font-bold mb-4">{error}</p>
-          <button
-            onClick={fetchProducts}
-            className="inline-flex items-center gap-1 px-5 py-2.5 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-2xl transition-colors"
-          >
-            <RefreshCw className="w-4 h-4" /> ลองโหลดใหม่อีกครั้ง
-          </button>
-        </div>
-      ) : sortedProducts.length === 0 ? (
-        <div className="bg-white border border-slate-200 p-12 rounded-3xl text-center max-w-md mx-auto">
-          <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Search className="w-8 h-8" />
+      {/* Main product catalog layout: Sidebar + Product list */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
+        {/* Sidebar for Categories (หมวดหมู่สินค้าข้างๆกล่อง card สินค้า) */}
+        <aside className="w-full lg:w-64 flex-shrink-0 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 lg:sticky lg:top-24">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Filter className="w-5 h-5 text-primary-600" />
+            <h2 className="font-extrabold text-lg text-slate-900">หมวดหมู่สินค้า</h2>
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">ไม่พบสินค้าที่ต้องการ</h3>
-          <p className="text-slate-500 leading-relaxed">
-            ลองใช้คำค้นหาอื่น หรือปรับเปลี่ยนการกรองดูนะคะ
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {paginatedProducts.map((product) => {
-            const outOfStock = product.stock <= 0;
-            const ratingInfo = getAverageRating(product.id, product.category);
-            
-            return (
-              <div
-                key={product.id}
-                className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-lg transition-shadow group relative"
-              >
-                {/* Clickable Area for Details */}
-                <div 
-                  className="cursor-pointer" 
-                  onClick={() => handleOpenDetails(product)}
+          
+          {/* Scrollable on mobile/tablet, vertical list on desktop */}
+          <div className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 scrollbar-none lg:scrollbar-default">
+            {categories.map((cat) => {
+              const count = products.filter(p => cat === 'ทั้งหมด' || p.category === cat).length;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-2xl text-[15px] font-bold transition-all text-left whitespace-nowrap lg:whitespace-normal flex-shrink-0 lg:flex-shrink lg:w-full ${
+                    selectedCategory === cat
+                      ? 'bg-primary-600 text-white shadow-md shadow-primary-100'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
                 >
-                  {/* Product Image */}
-                  <div className="relative pt-[70%] bg-slate-100 overflow-hidden">
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                    {outOfStock ? (
-                      <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center">
-                        <span className="bg-danger-600 text-white font-extrabold px-4 py-2 rounded-xl text-sm tracking-wide">
-                          สินค้าหมดชั่วคราว
-                        </span>
-                      </div>
-                    ) : product.stock <= 5 ? (
-                      <div className="absolute top-4 left-4 bg-warning-500 text-white font-bold px-3 py-1 rounded-lg text-xs">
-                        เหลือแค่ {product.stock} ชิ้นเท่านั้น!
-                      </div>
-                    ) : null}
-                    <div className="absolute top-4 right-4 bg-slate-900/60 backdrop-blur-xs text-white px-3 py-1 rounded-xl text-xs font-semibold">
-                      {product.category}
-                    </div>
-                  </div>
+                  <span className="mr-3 lg:mr-0">{cat}</span>
+                  <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                    selectedCategory === cat ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
 
-                  {/* Product Info */}
-                  <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                    <div className="space-y-1.5">
-                      {/* Rating star on list */}
-                      <div className="flex items-center gap-1 text-amber-500 text-[13px] font-bold">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        <span>{ratingInfo.rating > 0 ? ratingInfo.rating : 'ไม่มีรีวิว'}</span>
-                        <span className="text-slate-400 font-normal">({ratingInfo.totalReviews})</span>
-                      </div>
-                      
-                      <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-primary-600 transition-colors line-clamp-1">
-                        {product.name}
-                      </h3>
-                      <p className="text-[14px] text-slate-500 line-clamp-2 leading-relaxed h-[42px]">
-                        {product.description || 'ไม่มีรายละเอียดเพิ่มเติม'}
-                      </p>
-                    </div>
-
-                    <div className="flex items-baseline justify-between border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="text-xs text-slate-400 block font-semibold">ราคาต่อชิ้น</span>
-                        <span className="text-2xl font-black text-slate-900">
-                          {product.price.toLocaleString()} <span className="text-sm font-bold text-slate-500">บาท</span>
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-slate-400 block font-semibold">สถานะคลัง</span>
-                        <span className={`text-sm font-extrabold ${outOfStock ? 'text-danger-600' : 'text-success-600'}`}>
-                          {outOfStock ? 'ของหมดแล้ว' : `มีสินค้าอยู่ ${product.stock} ชิ้น`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Add to Cart Action */}
-                <div className="p-5 pt-0">
-                  <button
-                    onClick={() => handleAddToCart(product, 1)}
-                    disabled={outOfStock}
-                    className={`w-full py-3 px-4 font-bold text-[15px] rounded-2xl flex items-center justify-center gap-2 border transition-all ${
-                      outOfStock
-                        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                        : 'bg-primary-600 hover:bg-primary-700 text-white border-primary-600 shadow-md shadow-primary-50 hover:shadow-primary-100 min-h-[48px]'
-                    }`}
-                  >
-                    <ShoppingCart className="w-5 h-5" />
-                    <span>{outOfStock ? 'ขออภัย สินค้าหมดแล้ว' : 'เพิ่มลงในตะกร้า'}</span>
-                  </button>
-                </div>
+        {/* Product Grid Area */}
+        <div className="flex-1 w-full space-y-6">
+          {loading ? (
+            <div className="py-20 flex flex-col justify-center items-center">
+              <div className="w-14 h-14 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="mt-4 text-slate-500 font-medium">กำลังเตรียมโหลดรายการสินค้าจากร้านค้า...</span>
+            </div>
+          ) : error ? (
+            <div className="bg-danger-50 border-l-4 border-danger-500 p-6 rounded-r-3xl text-center">
+              <p className="text-danger-700 font-bold mb-4">{error}</p>
+              <button
+                onClick={fetchProducts}
+                className="inline-flex items-center gap-1 px-5 py-2.5 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-2xl transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" /> ลองโหลดใหม่อีกครั้ง
+              </button>
+            </div>
+          ) : sortedProducts.length === 0 ? (
+            <div className="bg-white border border-slate-200 p-12 rounded-3xl text-center max-w-md mx-auto">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8" />
               </div>
-            );
-          })}
-        </div>
-      )}
+              <h3 className="text-xl font-bold text-slate-800 mb-2">ไม่พบสินค้าที่ต้องการ</h3>
+              <p className="text-slate-500 leading-relaxed">
+                ลองใช้คำค้นหาอื่น หรือปรับเปลี่ยนการกรองดูนะคะ
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {paginatedProducts.map((product) => {
+                  const outOfStock = product.stock <= 0;
+                  const ratingInfo = getAverageRating(product.id, product.category);
+                  
+                  return (
+                    <div
+                      key={product.id}
+                      className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-lg transition-shadow group relative"
+                    >
+                      {/* Clickable Area for Details */}
+                      <div 
+                        className="cursor-pointer" 
+                        onClick={() => handleOpenDetails(product)}
+                      >
+                        {/* Product Image */}
+                        <div className="relative pt-[70%] bg-slate-100 overflow-hidden">
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                          {outOfStock ? (
+                            <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center">
+                              <span className="bg-danger-600 text-white font-extrabold px-4 py-2 rounded-xl text-sm tracking-wide">
+                                สินค้าหมดชั่วคราว
+                              </span>
+                            </div>
+                          ) : product.stock <= 5 ? (
+                            <div className="absolute top-4 left-4 bg-warning-500 text-white font-bold px-3 py-1 rounded-lg text-xs">
+                              เหลือแค่ {product.stock} ชิ้นเท่านั้น!
+                            </div>
+                          ) : null}
+                          <div className="absolute top-4 right-4 bg-slate-900/60 backdrop-blur-xs text-white px-3 py-1 rounded-xl text-xs font-semibold">
+                            {product.category}
+                          </div>
+                        </div>
 
-      {/* Pagination Controls */}
-      {sortedProducts.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={sortedProducts.length}
-          itemsPerPage={itemsPerPage}
-        />
-      )}
+                        {/* Product Info */}
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1.5">
+                            {/* Rating star and Category badge on list */}
+                            <div className="flex items-center justify-between gap-1 text-[13px] font-bold">
+                              <div className="flex items-center gap-1 text-amber-500">
+                                <Star className="w-3.5 h-3.5 fill-current" />
+                                <span>{ratingInfo.rating > 0 ? ratingInfo.rating : 'ไม่มีรีวิว'}</span>
+                                <span className="text-slate-400 font-normal">({ratingInfo.totalReviews})</span>
+                              </div>
+                              <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg text-xs font-semibold">
+                                {product.category}
+                              </span>
+                            </div>
+                            
+                            <h3 className="font-extrabold text-lg text-slate-950 group-hover:text-primary-600 transition-colors line-clamp-1">
+                              {product.name}
+                            </h3>
+                            <p className="text-[14px] text-slate-500 line-clamp-2 leading-relaxed h-[42px]">
+                              {product.description || 'ไม่มีรายละเอียดเพิ่มเติม'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-baseline justify-between border-t border-slate-100 pt-3">
+                            <div>
+                              <span className="text-xs text-slate-400 block font-semibold">ราคาต่อชิ้น</span>
+                              <span className="text-2xl font-black text-slate-900">
+                                {product.price.toLocaleString()} <span className="text-sm font-bold text-slate-500">บาท</span>
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-slate-400 block font-semibold">สถานะคลัง</span>
+                              <span className={`text-sm font-extrabold ${outOfStock ? 'text-danger-600' : 'text-success-600'}`}>
+                                {outOfStock ? 'ของหมดแล้ว' : `มีสินค้าอยู่ ${product.stock} ชิ้น`}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add to Cart Action */}
+                      <div className="p-5 pt-0">
+                        <button
+                          onClick={() => handleAddToCart(product, 1)}
+                          disabled={outOfStock}
+                          className={`w-full py-3 px-4 font-bold text-[15px] rounded-2xl flex items-center justify-center gap-2 border transition-all ${
+                            outOfStock
+                              ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                              : 'bg-primary-600 hover:bg-primary-700 text-white border-primary-600 shadow-md shadow-primary-50 hover:shadow-primary-100 min-h-[48px]'
+                          }`}
+                        >
+                          <ShoppingCart className="w-5 h-5" />
+                          <span>{outOfStock ? 'ขออภัย สินค้าหมดแล้ว' : 'เพิ่มลงในตะกร้า'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pagination Controls */}
+              {sortedProducts.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={sortedProducts.length}
+                  itemsPerPage={itemsPerPage}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Product Detail Modal */}
       {selectedProduct && (
