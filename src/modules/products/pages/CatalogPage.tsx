@@ -21,6 +21,45 @@ import {
   ProductVariant
 } from '../utils/mockData';
 
+const NEWS_ITEMS = [
+  {
+    id: 1,
+    tag: 'โปรโมชันพิเศษ',
+    title: 'ฉลองเปิดตัวระบบ สบายดีมาร์เก็ต 🛒',
+    description: 'รับส่วนลดพิเศษทันที 10% สำหรับสมาชิกใหม่ทุกคน เพียงใช้คูปองส่วนลดที่กำหนดหน้าชำระเงิน ช้อปสินค้าสุขภาพดีวันนี้เลย!',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'ช้อปผักสดวันนี้',
+    action: 'vegetables'
+  },
+  {
+    id: 2,
+    tag: 'ข่าวประชาสัมพันธ์',
+    title: 'ส่งตรงความสดใหม่จากสวนออร์แกนิก 🥬',
+    description: 'ผักสวนครัวและผลไม้ทุกประเภท ปลูกด้วยวิถีธรรมชาติ ปลอดสารพิษ 100% ปลอดภัยต่อสุขภาพตัวคุณและครอบครัวที่คุณรัก',
+    image: 'https://images.unsplash.com/photo-1500937386664-56d1590d333c?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'ดูสินค้าออร์แกนิก',
+    action: 'vegetables'
+  },
+  {
+    id: 3,
+    tag: 'ข่าวประชาสัมพันธ์',
+    title: 'บริการจัดส่งฟรีทั่วพื้นที่ชุมชน 🚚',
+    description: 'เมื่อซื้อครบ 500 บาทขึ้นไป จัดส่งรวดเร็วทันใจในวันเดียว คงความสดใหม่ของอาหารเสมือนมาเลือกซื้อที่หน้าร้านด้วยตัวเอง',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'ดูเงื่อนไขส่งฟรี',
+    action: 'free-delivery'
+  },
+  {
+    id: 4,
+    tag: 'เคล็ดลับสุขภาพ',
+    title: 'วิธีเลือกผักและผลไม้สดที่ถูกต้อง 🍎',
+    description: 'เรียนรู้ทริคเล็กๆ ในการสังเกตความสดใหม่และการล้างทำความสะอาดสารเคมีตกค้างอย่างถูกวิธี เพื่อโภชนาการที่ดีที่สุดในทุกมื้ออาหาร',
+    image: 'https://images.unsplash.com/photo-1610970881699-44a5587caa9a?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'อ่านเคล็ดลับสุขภาพ',
+    action: 'health-tips'
+  }
+];
+
 export const CatalogPage: React.FC = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
@@ -31,8 +70,28 @@ export const CatalogPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ทั้งหมด');
   const [categories, setCategories] = useState<string[]>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [activeNewsModal, setActiveNewsModal] = useState<string | null>(null);
+  const [newsList, setNewsList] = useState<any[]>(NEWS_ITEMS);
   
   const [searchParams] = useSearchParams();
+
+  const handleNewsClick = (action: string) => {
+    if (action === 'vegetables') {
+      const vegCategory = categories.find(c => c.includes('ผัก') || c.includes('ผลไม้'));
+      if (vegCategory) {
+        setSelectedCategory(vegCategory);
+      } else {
+        setSelectedCategory('ทั้งหมด');
+      }
+      const element = document.getElementById('catalog-grid-top');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      setActiveNewsModal(action);
+    }
+  };
 
   // Read initial category from URL if present
   useEffect(() => {
@@ -121,6 +180,35 @@ export const CatalogPage: React.FC = () => {
     fetchProducts();
     logVisitorVisit(window.location.pathname);
   }, []);
+
+  // Load news from localStorage or defaults
+  useEffect(() => {
+    const loadNews = () => {
+      const stored = localStorage.getItem('app_news_items');
+      if (stored) {
+        try {
+          setNewsList(JSON.parse(stored));
+        } catch {
+          setNewsList(NEWS_ITEMS);
+        }
+      } else {
+        setNewsList(NEWS_ITEMS);
+        localStorage.setItem('app_news_items', JSON.stringify(NEWS_ITEMS));
+      }
+    };
+    loadNews();
+    window.addEventListener('news-updated', loadNews);
+    return () => window.removeEventListener('news-updated', loadNews);
+  }, []);
+
+  // Auto-rotate Carousel slides for News
+  useEffect(() => {
+    if (newsList.length === 0) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % newsList.length);
+    }, 5000); // 5 seconds
+    return () => clearInterval(interval);
+  }, [newsList]);
 
   // Sync follow state if changed elsewhere (e.g. Profile Page)
   useEffect(() => {
@@ -341,22 +429,84 @@ export const CatalogPage: React.FC = () => {
   return (
     <div className="space-y-8 font-['Inter',sans-serif]">
       
-      {/* Intro Hero banner */}
-      <div className="bg-gradient-to-r from-primary-600 to-sky-700 text-white rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden">
-        <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-y-8 translate-x-8">
-          <ShoppingCart className="w-96 h-96" />
+      {/* Auto-rotating Hero Carousel (News & Promotions) */}
+      <div className="relative rounded-3xl h-[300px] sm:h-[350px] shadow-lg overflow-hidden group select-none animate-fade-in">
+        {newsList.map((news, idx) => {
+          const isActive = idx === activeSlide;
+          return (
+            <div
+              key={news.id}
+              className={`absolute inset-0 transition-all duration-1000 ease-in-out transform ${
+                isActive ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-105 pointer-events-none'
+              }`}
+            >
+              {/* Background Image with Dark Overlay */}
+              <div className="absolute inset-0 bg-slate-950">
+                <img
+                  src={news.image}
+                  alt={news.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-slate-950/40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/30 to-transparent" />
+              </div>
+
+              {/* Content */}
+              <div className="absolute inset-0 p-6 sm:p-10 flex flex-col justify-between z-20">
+                <div className="max-w-xl space-y-3">
+                  <span className="inline-flex items-center gap-1.5 bg-primary-600/95 text-white px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5" /> {news.tag}
+                  </span>
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight line-clamp-1 drop-shadow-md">
+                    {news.title}
+                  </h1>
+                  <p className="text-slate-200 text-sm sm:text-base leading-relaxed line-clamp-2 max-w-lg drop-shadow-sm">
+                    {news.description}
+                  </p>
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => handleNewsClick(news.action)}
+                    className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-extrabold px-6 py-3 rounded-2xl transition-all shadow-md active:scale-95 text-sm sm:text-[15px]"
+                  >
+                    <span>{news.ctaText}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Dots Indicator */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-2 z-30">
+          {newsList.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveSlide(idx)}
+              className={`h-2.5 rounded-full transition-all duration-300 ${
+                idx === activeSlide ? 'w-6 bg-white' : 'w-2.5 bg-white/40 hover:bg-white/60'
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
         </div>
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-1 bg-white/20 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider mb-4">
-            <Sparkles className="w-4 h-4" /> สิทธิประโยชน์สำหรับคุณในวันนี้
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            เลือกสินค้าสุขภาพดี สดใหม่ทุกวัน
-          </h1>
-          <p className="text-primary-50 text-[16px] sm:text-[18px] leading-relaxed">
-            สินค้าทุกชิ้นผ่านการตรวจสอบความสะอาด ปลอดภัย คัดเกรดอย่างดีในราคาเป็นกันเอง พร้อมจัดส่งตรงถึงบ้านคุณ
-          </p>
-        </div>
+
+        {/* Left/Right Navigation Buttons */}
+        <button
+          onClick={() => setActiveSlide((prev) => (prev - 1 + newsList.length) % newsList.length)}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/25 hover:bg-black/45 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"
+          aria-label="Previous slide"
+        >
+          &#10094;
+        </button>
+        <button
+          onClick={() => setActiveSlide((prev) => (prev + 1) % newsList.length)}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/25 hover:bg-black/45 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30"
+          aria-label="Next slide"
+        >
+          &#10095;
+        </button>
       </div>
 
       {/* Added Toast Notification */}
@@ -484,7 +634,7 @@ export const CatalogPage: React.FC = () => {
       </div>
 
       {/* Main product catalog layout: Sidebar + Product list */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div id="catalog-grid-top" className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Sidebar for Categories (หมวดหมู่สินค้าข้างๆกล่อง card สินค้า) */}
         <aside className="w-full lg:w-64 flex-shrink-0 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 lg:sticky lg:top-24">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
@@ -1083,6 +1233,72 @@ export const CatalogPage: React.FC = () => {
 
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* News Detail Modal */}
+      {activeNewsModal && (
+        <div className="fixed inset-0 bg-slate-950/65 backdrop-blur-md z-50 flex items-center justify-center p-4 md:p-6 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-6 sm:p-8 relative animate-scale-up">
+            <button 
+              onClick={() => setActiveNewsModal(null)}
+              className="absolute top-4 right-4 w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full flex items-center justify-center transition-colors shadow-sm focus:outline-none"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {activeNewsModal === 'free-delivery' ? (
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-950">รายละเอียดเงื่อนไขจัดส่งฟรี 🚚</h3>
+                <div className="space-y-3 text-slate-600 text-sm leading-relaxed font-medium">
+                  <p>
+                    สบายดีมาร์เก็ต มอบสิทธิพิเศษบริการจัดส่งฟรีทั่วพื้นที่สำหรับยอดสั่งซื้อตั้งแต่ <strong>500 บาทขึ้นไป</strong>
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1.5">
+                    <li>ยอดสั่งซื้อน้อยกว่า 500 บาท มีค่าจัดส่งเริ่มต้น 40 บาท</li>
+                    <li>จัดส่งรวดเร็วด้วยกล่องเก็บความเย็นพิเศษเพื่อถนอมผักผลไม้สดและอาหารสด</li>
+                    <li>ระยะเวลาจัดส่ง 1-2 วันทำการ (สั่งเช้า ส่งบ่ายสำหรับพื้นที่ใกล้เคียง)</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => setActiveNewsModal(null)}
+                  className="w-full mt-4 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-2xl transition-colors text-sm"
+                >
+                  รับทราบ
+                </button>
+              </div>
+            ) : activeNewsModal === 'health-tips' ? (
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-extrabold text-slate-955">เคล็ดลับการเลือกซื้อและการล้างผักผลไม้ 🍎</h3>
+                <div className="space-y-3.5 text-slate-600 text-sm leading-relaxed font-medium">
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-[15px] mb-1">1. การล้างเพื่อลดสารเคมีตกค้าง:</h4>
+                    <p>แช่ผักในน้ำผสมเบกกิ้งโซดา (ครึ่งช้อนโต๊ะต่อน้ำ 10 ลิตร) นาน 15 นาที แล้วล้างออกด้วยน้ำสะอาด สามารถช่วยลดสารเคมีได้สูงสุดถึง 90%</p>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-[15px] mb-1">2. การสังเกตความสดใหม่:</h4>
+                    <p>เลือกผักที่มีสีสันตามธรรมชาติ ไม่มีรอยช้ำหรือรอยเน่า ใบไม่เหลืองซีด สำหรับผลไม้ควรเลือกผลที่ขั้วยังดูสดและมีกลิ่นหอมเฉพาะตัว</p>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-[15px] mb-1">3. ทริคการเก็บรักษา:</h4>
+                    <p>ไม่ควรล้างผักก่อนนำไปแช่ตู้เย็น หากล้างแล้วต้องผึ่งให้แห้งสนิทก่อนเก็บใส่ถุงหรือกล่องสูญญากาศ เพื่อป้องกันใบเน่าเสียเร็วขึ้น</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveNewsModal(null)}
+                  className="w-full mt-4 bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-4 rounded-2xl transition-colors text-sm"
+                >
+                  ตกลง
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
