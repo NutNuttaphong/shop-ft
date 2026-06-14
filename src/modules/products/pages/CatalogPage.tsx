@@ -21,7 +21,25 @@ import {
   ProductVariant
 } from '../utils/mockData';
 
-const NEWS_ITEMS = [
+export interface NewsItem {
+  id: number;
+  tag: string;
+  title: string;
+  description: string;
+  image: string;
+  ctaText: string;
+  action: string;
+}
+
+interface BackendReview {
+  id: string | number;
+  username?: string;
+  rating: number;
+  comment: string;
+  createdAt?: string;
+}
+
+const NEWS_ITEMS: NewsItem[] = [
   {
     id: 1,
     tag: 'โปรโมชันพิเศษ',
@@ -72,7 +90,7 @@ export const CatalogPage: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeNewsModal, setActiveNewsModal] = useState<string | null>(null);
-  const [newsList, setNewsList] = useState<any[]>(NEWS_ITEMS);
+  const [newsList, setNewsList] = useState<NewsItem[]>(NEWS_ITEMS);
   
   const [searchParams] = useSearchParams();
 
@@ -169,7 +187,7 @@ export const CatalogPage: React.FC = () => {
         const uniqueCategories = ['ทั้งหมด', ...new Set(data.map(p => p.category))];
         setCategories(uniqueCategories);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลสินค้าได้');
     } finally {
       setLoading(false);
@@ -232,7 +250,7 @@ export const CatalogPage: React.FC = () => {
     }
 
     try {
-      const res = await restfulApi.post<any>('/api/cart', {
+      const res = await restfulApi.post<unknown>('/api/cart', {
         productId: product.id,
         quantity: quantity,
         variantName: variantName,
@@ -258,11 +276,11 @@ export const CatalogPage: React.FC = () => {
 
   const fetchReviews = async (productId: string) => {
     try {
-      const res = await restfulApi.get<any[]>(`/api/products/${productId}/reviews`);
+      const res = await restfulApi.get<BackendReview[]>(`/api/products/${productId}/reviews`);
       if (res.data) {
         const list = res.data;
-        setReviews(list.map((r: any) => ({
-          id: r.id,
+        setReviews(list.map((r: BackendReview) => ({
+          id: String(r.id),
           reviewerName: r.username || 'ผู้ซื้อทั่วไป',
           rating: r.rating,
           comment: r.comment,
@@ -276,7 +294,7 @@ export const CatalogPage: React.FC = () => {
         const avg = total > 0 ? Number((sum / total).toFixed(1)) : 0;
         
         const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-        list.forEach((r: any) => {
+        list.forEach((r: BackendReview) => {
           if (r.rating >= 1 && r.rating <= 5) {
             dist[r.rating]++;
           }
@@ -371,7 +389,7 @@ export const CatalogPage: React.FC = () => {
     }
 
     try {
-      const res = await restfulApi.post<any>(`/api/products/${selectedProduct.id}/reviews`, {
+      const res = await restfulApi.post<unknown>(`/api/products/${selectedProduct.id}/reviews`, {
         rating: reviewRating,
         comment: reviewComment
       });
@@ -387,7 +405,7 @@ export const CatalogPage: React.FC = () => {
         
         setTimeout(() => setReviewSuccess(false), 3000);
       }
-    } catch (err) {
+    } catch {
       setReviewError('เกิดข้อผิดพลาดในการส่งรีวิวสินค้า');
     }
   };

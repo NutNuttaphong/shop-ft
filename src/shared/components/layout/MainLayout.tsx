@@ -38,7 +38,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // Load font size preference
   useEffect(() => {
-    const savedSize = localStorage.getItem('app_text_size') as any;
+    const savedSize = localStorage.getItem('app_text_size') as 'standard' | 'large' | 'extra-large' | null;
     if (savedSize && ['standard', 'large', 'extra-large'].includes(savedSize)) {
       setTextSize(savedSize);
     }
@@ -87,7 +87,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const getCartCount = () => {
     try {
       const cart = JSON.parse(localStorage.getItem('app_cart') || '[]');
-      return cart.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+      return cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0);
     } catch {
       return 0;
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Newspaper, Plus, Edit2, Trash2, X, Image as ImageIcon, 
-  Sparkles, Check, RefreshCw 
+  Check, RefreshCw 
 } from 'lucide-react';
 
 interface NewsItem {

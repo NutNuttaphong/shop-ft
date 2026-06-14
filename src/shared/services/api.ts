@@ -84,14 +84,33 @@ function buildHeaders(extra?: Record<string, string>): Record<string, string> {
   return headers;
 }
 
+interface RawPromotion {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  discountType?: string;
+  discountValue: number;
+  minPurchase: number;
+  active?: boolean;
+  isActive?: boolean;
+  imageUrl?: string;
+  startDate: string;
+  endDate: string;
+  type?: string;
+  productIds?: string[];
+  bundleQty?: number;
+  targetCategory?: string;
+}
+
 /**
  * Normalize promotion data from backend (Java enums are UPPERCASE)
  */
-function normalizePromotion(p: any): Promotion {
+function normalizePromotion(p: RawPromotion): Promotion {
   return {
     ...p,
     discountType: (p.discountType || '').toLowerCase() as 'percentage' | 'fixed',
-    isActive: p.active !== undefined ? p.active : p.isActive,
+    isActive: p.active !== undefined ? p.active : !!p.isActive,
   };
 }
 
@@ -108,7 +127,7 @@ class RestClient {
   /**
    * HTTP GET Request
    */
-  async get<T>(path: string, _options?: RequestInit): Promise<ApiResponse<T>> {
+  async get<T>(path: string): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: 'GET',
@@ -129,17 +148,18 @@ class RestClient {
       let data = json.data;
       if (path.includes('/api/promotions')) {
         if (Array.isArray(data)) {
-          data = (data as any[]).map(normalizePromotion) as unknown as T;
+          data = (data as unknown as RawPromotion[]).map(normalizePromotion) as unknown as T;
         } else if (data && typeof data === 'object') {
-          data = normalizePromotion(data) as unknown as T;
+          data = normalizePromotion(data as unknown as RawPromotion) as unknown as T;
         }
       }
 
       return { data, error: null, status: response.status };
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
       return {
         data: null,
-        error: err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่',
+        error: message,
         status: 500,
       };
     }
@@ -148,7 +168,7 @@ class RestClient {
   /**
    * HTTP POST Request
    */
-  async post<T>(path: string, body: any, _options?: RequestInit): Promise<ApiResponse<T>> {
+  async post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: 'POST',
@@ -167,10 +187,11 @@ class RestClient {
       }
 
       return { data: json.data, error: null, status: response.status };
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
       return {
         data: null,
-        error: err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่',
+        error: message,
         status: 500,
       };
     }
@@ -179,7 +200,7 @@ class RestClient {
   /**
    * HTTP PUT Request
    */
-  async put<T>(path: string, body: any): Promise<ApiResponse<T>> {
+  async put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${path}`, {
         method: 'PUT',
@@ -198,10 +219,11 @@ class RestClient {
       }
 
       return { data: json.data, error: null, status: response.status };
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
       return {
         data: null,
-        error: err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+        error: message,
         status: 500,
       };
     }
@@ -228,10 +250,11 @@ class RestClient {
       }
 
       return { data: json.data, error: null, status: response.status };
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
       return {
         data: null,
-        error: err.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+        error: message,
         status: 500,
       };
     }
