@@ -115,7 +115,7 @@ export const ChatWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[999] font-['Outfit',sans-serif]">
+    <div className="fixed bottom-6 right-6 z-[999] font-['Outfit',sans-serif] print:hidden">
       {/* Chat Launcher Button */}
       {!isOpen && (
         <button

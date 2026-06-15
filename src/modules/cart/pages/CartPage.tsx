@@ -40,10 +40,18 @@ export const CartPage: React.FC = () => {
   const [showQrModal, setShowQrModal] = useState(false);
   const [uploadedSlipName, setUploadedSlipName] = useState('');
   
+  const [taxInvoiceRequested, setTaxInvoiceRequested] = useState(false);
+  const [taxName, setTaxName] = useState('');
+  const [taxId, setTaxId] = useState('');
+  const [taxAddress, setTaxAddress] = useState('');
+  
   const [formErrors, setFormErrors] = useState<{
     name?: string;
     phone?: string;
     address?: string;
+    taxName?: string;
+    taxId?: string;
+    taxAddress?: string;
   }>({});
 
   // Coupon states
@@ -201,6 +209,24 @@ export const CartPage: React.FC = () => {
     } else if (customerAddress.trim().length < 15) {
       errors.address = 'กรุณาระบุที่อยู่จัดส่งอย่างละเอียดเพื่อให้ส่งสินค้าได้ถูกต้อง';
     }
+    
+    if (taxInvoiceRequested) {
+      if (!taxName.trim()) {
+        errors.taxName = 'กรุณาระบุชื่อผู้เสียภาษี / ชื่อบริษัท';
+      }
+      const taxIdRegex = /^\d{13}$/;
+      if (!taxId.trim()) {
+        errors.taxId = 'กรุณาระบุเลขประจำตัวผู้เสียภาษี';
+      } else if (!taxIdRegex.test(taxId.replace(/[-\s]/g, ''))) {
+        errors.taxId = 'เลขประจำตัวผู้เสียภาษีต้องเป็นตัวเลข 13 หลัก';
+      }
+      if (!taxAddress.trim()) {
+        errors.taxAddress = 'กรุณาระบุที่อยู่ตามทะเบียนภาษี';
+      } else if (taxAddress.trim().length < 10) {
+        errors.taxAddress = 'กรุณาระบุที่อยู่ตามทะเบียนภาษีอย่างละเอียด';
+      }
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -232,7 +258,11 @@ export const CartPage: React.FC = () => {
         slipName: uploadedSlipName || null,
         promoCode: appliedPromoCode || null,
         discount: discountAmount + autoDiscountAmount,
-        coinsUsed: useCoins ? coinsToUse : 0
+        coinsUsed: useCoins ? coinsToUse : 0,
+        taxInvoiceRequested,
+        taxName: taxInvoiceRequested ? taxName : null,
+        taxId: taxInvoiceRequested ? taxId.replace(/[-\s]/g, '') : null,
+        taxAddress: taxInvoiceRequested ? taxAddress : null
       };
 
       if (isBuyNow) {
@@ -271,6 +301,10 @@ export const CartPage: React.FC = () => {
           name: customerName,
           phone: customerPhone,
           address: customerAddress,
+          taxInvoiceRequested: order.customer?.taxInvoiceRequested || taxInvoiceRequested,
+          taxName: order.customer?.taxName || (taxInvoiceRequested ? taxName : null),
+          taxId: order.customer?.taxId || (taxInvoiceRequested ? taxId : null),
+          taxAddress: order.customer?.taxAddress || (taxInvoiceRequested ? taxAddress : null)
         },
         paymentMethod,
         slipUploaded: paymentMethod === 'qr' && !!uploadedSlipName,
@@ -448,7 +482,7 @@ export const CartPage: React.FC = () => {
 
   if (checkoutSuccess) {
     return (
-      <div className="max-w-3xl mx-auto space-y-6 font-['Inter',sans-serif] animate-fade-in mt-6">
+      <div className="max-w-3xl mx-auto space-y-6 font-['Inter',sans-serif] animate-fade-in mt-6 print:m-0 print:p-0 print:max-w-none">
         <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-8 text-center space-y-4 print:hidden">
           <div className="w-16 h-16 bg-success-50 rounded-full flex items-center justify-center mx-auto text-success-600 border border-success-100">
             <HeartHandshake className="w-8 h-8" />
@@ -679,6 +713,94 @@ export const CartPage: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Tax Invoice Checkbox */}
+                <div className="sm:col-span-2 pt-4 border-t border-slate-200/80">
+                  <label className="flex items-center gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={taxInvoiceRequested}
+                      onChange={(e) => setTaxInvoiceRequested(e.target.checked)}
+                      className="w-5 h-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500 transition-colors"
+                    />
+                    <span className="text-[15px] font-extrabold text-slate-800">
+                      ขอใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูปแบบ
+                    </span>
+                  </label>
+                  <p className="text-xs text-slate-400 font-bold ml-8 mt-0.5">
+                    ติ๊กถูกหากคุณต้องการระบุรายละเอียดข้อมูลผู้เสียภาษีเพื่อการลดหย่อนหรือรายงานภาษี
+                  </p>
+                </div>
+
+                {/* Tax Invoice Form Fields */}
+                {taxInvoiceRequested && (
+                  <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-200/60 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-[14px] font-bold text-slate-700 block">
+                        ชื่อผู้เสียภาษี (บุคคลธรรมดา/นิติบุคคล) <span className="text-danger-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ระบุชื่อจริง-นามสกุล หรือชื่อบริษัท"
+                        value={taxName}
+                        onChange={(e) => {
+                          setTaxName(e.target.value);
+                          if (formErrors.taxName) setFormErrors(prev => ({ ...prev, taxName: undefined }));
+                        }}
+                        className={`w-full px-4 py-3 bg-white border ${formErrors.taxName ? 'border-danger-500 focus:ring-danger-200' : 'border-slate-200 focus:ring-primary-200'} rounded-2xl text-[16px] focus:outline-none focus:ring-4 transition-all`}
+                      />
+                      {formErrors.taxName && (
+                        <p className="text-xs font-bold text-danger-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {formErrors.taxName}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[14px] font-bold text-slate-700 block">
+                        เลขประจำตัวผู้เสียภาษี (13 หลัก) <span className="text-danger-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={13}
+                        placeholder="ระบุตัวเลข 13 หลัก"
+                        value={taxId}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setTaxId(val);
+                          if (formErrors.taxId) setFormErrors(prev => ({ ...prev, taxId: undefined }));
+                        }}
+                        className={`w-full px-4 py-3 bg-white border ${formErrors.taxId ? 'border-danger-500 focus:ring-danger-200' : 'border-slate-200 focus:ring-primary-200'} rounded-2xl text-[16px] focus:outline-none focus:ring-4 transition-all`}
+                      />
+                      {formErrors.taxId && (
+                        <p className="text-xs font-bold text-danger-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {formErrors.taxId}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-2">
+                      <label className="text-[14px] font-bold text-slate-700 block">
+                        ที่อยู่ตามทะเบียนภาษี / ที่อยู่ออกใบกำกับภาษี <span className="text-danger-500">*</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="ระบุที่อยู่ที่จดทะเบียนภาษีอย่างละเอียด"
+                        value={taxAddress}
+                        onChange={(e) => {
+                          setTaxAddress(e.target.value);
+                          if (formErrors.taxAddress) setFormErrors(prev => ({ ...prev, taxAddress: undefined }));
+                        }}
+                        className={`w-full px-4 py-3 bg-white border ${formErrors.taxAddress ? 'border-danger-500 focus:ring-danger-200' : 'border-slate-200 focus:ring-primary-200'} rounded-2xl text-[16px] focus:outline-none focus:ring-4 transition-all resize-none`}
+                      />
+                      {formErrors.taxAddress && (
+                        <p className="text-xs font-bold text-danger-500 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {formErrors.taxAddress}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Payment selection */}

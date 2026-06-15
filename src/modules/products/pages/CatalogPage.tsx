@@ -448,7 +448,7 @@ export const CatalogPage: React.FC = () => {
     <div className="space-y-8 font-['Inter',sans-serif]">
       
       {/* Auto-rotating Hero Carousel (News & Promotions) */}
-      <div className="relative rounded-3xl h-[300px] sm:h-[350px] shadow-lg overflow-hidden group select-none animate-fade-in">
+      <div className="relative rounded-3xl h-[300px] sm:h-[350px] shadow-lg overflow-hidden group select-none animate-fade-in bg-slate-950">
         {newsList.map((news, idx) => {
           const isActive = idx === activeSlide;
           return (
@@ -465,7 +465,6 @@ export const CatalogPage: React.FC = () => {
                   alt={news.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-slate-950/40" />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/30 to-transparent" />
               </div>
 
@@ -475,7 +474,7 @@ export const CatalogPage: React.FC = () => {
                   <span className="inline-flex items-center gap-1.5 bg-primary-600/95 text-white px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
                     <Sparkles className="w-3.5 h-3.5" /> {news.tag}
                   </span>
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight line-clamp-1 drop-shadow-md">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight line-clamp-2 drop-shadow-md">
                     {news.title}
                   </h1>
                   <p className="text-slate-200 text-sm sm:text-base leading-relaxed line-clamp-2 max-w-lg drop-shadow-sm">

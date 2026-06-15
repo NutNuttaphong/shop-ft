@@ -20,6 +20,10 @@ export interface OrderData {
     name: string;
     phone: string;
     address: string;
+    taxName?: string | null;
+    taxId?: string | null;
+    taxAddress?: string | null;
+    taxInvoiceRequested?: boolean | null;
   };
   paymentMethod: 'cod' | 'qr';
   slipUploaded?: boolean;
@@ -117,42 +121,26 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
           }
 
-          /* Hide all other root components on page */
-          body > * {
-            visibility: hidden !important;
-            display: none !important;
-          }
-
-          #root, #root * {
-            visibility: hidden !important;
-            display: none !important;
-          }
-
-          /* Ensure the target wrapper and children are visible */
-          .receipt-print-wrapper,
-          .receipt-print-wrapper * {
-            visibility: visible !important;
+          #root {
+            width: 80mm !important;
+            height: auto !important;
+            overflow: visible !important;
             display: block !important;
           }
 
-          /* Make inline/flex items work */
-          .receipt-print-wrapper .flex,
-          .receipt-print-wrapper .flex * {
-            display: flex !important;
-          }
-
-          /* Specifically make the wrapper print-only full screen */
+          /* Ensure the target wrapper and children are visible and flow naturally */
           .receipt-print-wrapper {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: relative !important;
             width: 80mm !important;
             max-width: 80mm !important;
             margin: 0 !important;
             padding: 4mm !important;
-            filter: none !important;
+            box-sizing: border-box !important;
             background: #ffffff !important;
             display: block !important;
           }
@@ -199,11 +187,13 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
         {/* Receipt Status & Number */}
         <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-4">
           <div className="text-center font-bold text-slate-700 py-1 border border-slate-300 rounded mb-2 uppercase tracking-widest bg-slate-50 print:bg-white print:border-slate-400">
-            *** ชำระเงินเสร็จสิ้น ***
+            {order.customer.taxInvoiceRequested ? '*** ใบเสร็จรับเงิน / ใบกำกับภาษี ***' : '*** ชำระเงินเสร็จสิ้น ***'}
           </div>
           
           <div className="flex justify-between">
-            <span className="text-slate-400 font-bold">เลขที่ใบเสร็จ:</span>
+            <span className="text-slate-400 font-bold">
+              {order.customer.taxInvoiceRequested ? 'เลขที่เอกสาร:' : 'เลขที่ใบเสร็จ:'}
+            </span>
             <span className="font-extrabold text-slate-900">{order.orderNo}</span>
           </div>
           
@@ -233,6 +223,29 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
             </span>
           </div>
         </div>
+
+        {/* Tax invoice details */}
+        {order.customer.taxInvoiceRequested && (
+          <div className="space-y-1.5 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">
+            <span className="font-extrabold text-slate-900 block tracking-wide uppercase text-[10px]">
+              ข้อมูลผู้เสียภาษี / Tax Invoice
+            </span>
+            <div className="flex justify-between">
+              <span className="text-slate-400 font-bold">ชื่อผู้เสียภาษี:</span>
+              <span className="font-bold text-slate-800">{order.customer.taxName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400 font-bold">เลขประจำตัวผู้เสียภาษี:</span>
+              <span className="font-extrabold text-slate-800">{order.customer.taxId}</span>
+            </div>
+            <div className="space-y-0.5 pt-1">
+              <span className="text-slate-400 font-bold block">ที่อยู่จดทะเบียนภาษี:</span>
+              <span className="font-semibold text-slate-700 block bg-slate-50 p-2 rounded border border-slate-100 print:bg-white print:p-0 print:border-none leading-relaxed text-[10px]">
+                {order.customer.taxAddress}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Payment info */}
         <div className="space-y-1 text-xs border-b border-dashed border-slate-300 pb-4 receipt-section">

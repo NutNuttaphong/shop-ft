@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { restfulApi, Promotion, Product } from '../../../shared/services/api';
-import { Plus, Edit2, Trash2, X, AlertCircle, FolderOpen, RefreshCw, Calendar, Tag, Layers, Flame, ShoppingBag } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle, FolderOpen, RefreshCw, Calendar, Tag, Layers, Flame, ShoppingBag, Image as ImageIcon } from 'lucide-react';
 import { Pagination } from '../../../shared/components/ui/Pagination';
 
 export const ManagePromotionsPage: React.FC = () => {
@@ -43,6 +43,51 @@ export const ManagePromotionsPage: React.FC = () => {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
+
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์ที่เป็นรูปภาพเท่านั้นนะคะ');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('ขออภัยค่ะ รูปภาพต้องมีขนาดไม่เกิน 2MB เพื่อรักษาประสิทธิภาพการบันทึกข้อมูล');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setFormData(prev => ({ ...prev, imageUrl: event.target!.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Extract unique categories from products list
   const categoriesList = allProducts.length > 0
@@ -742,17 +787,53 @@ export const ManagePromotionsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Image URL */}
-              <div>
-                <label className="block text-[16px] font-bold text-slate-700 mb-1">ลิงก์รูปภาพประกอบ (Image URL)</label>
-                <input
-                  type="text"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleInputChange}
-                  placeholder="เช่น https://images.unsplash.com/..."
-                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors"
-                />
+              {/* Drag and Drop Image Upload */}
+              <div className="space-y-1">
+                <label className="block text-[16px] font-bold text-slate-700 mb-1">รูปภาพประกอบโปรโมชั่น</label>
+                
+                {formData.imageUrl ? (
+                  /* Image Preview Area */
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 aspect-video bg-slate-50">
+                    <img 
+                      src={formData.imageUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                      className="absolute top-2 right-2 bg-slate-900/80 hover:bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
+                    >
+                      เปลี่ยนรูปภาพ
+                    </button>
+                  </div>
+                ) : (
+                  /* Drag and Drop Area */
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('promo-image-input')?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 min-h-[140px] ${
+                      isDragActive 
+                        ? 'border-primary-500 bg-primary-50/50' 
+                        : 'border-slate-300 hover:border-primary-500 bg-slate-50 hover:bg-slate-100/50'
+                    }`}
+                  >
+                    <input
+                      id="promo-image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <ImageIcon className={`w-8 h-8 ${isDragActive ? 'text-primary-600' : 'text-slate-400'}`} />
+                    <div className="text-sm font-bold text-slate-700">
+                      ลากรูปภาพมาวางที่นี่ หรือ <span className="text-primary-600">เลือกไฟล์จากเครื่อง</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">รองรับไฟล์ JPG, PNG, GIF (แนะนำสัดส่วน 3:2)</p>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

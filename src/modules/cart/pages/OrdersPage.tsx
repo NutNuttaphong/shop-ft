@@ -557,8 +557,8 @@ export const OrdersPage: React.FC = () => {
 
       {/* View Receipt Modal Details */}
       {showReceiptModal && selectedOrder && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:backdrop-none">
-          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl animate-scale-up border border-slate-100 my-8 overflow-hidden print:my-0 print:border-none print:shadow-none print:rounded-none">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:backdrop-none print:static print:block print:w-auto print:h-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl animate-scale-up border border-slate-100 my-8 overflow-hidden print:my-0 print:border-none print:shadow-none print:rounded-none print:static print:block print:w-auto print:h-auto">
             
             {/* Modal Title bar */}
             <div className="flex justify-between items-center px-6 py-4 bg-slate-50 border-b border-slate-100 print:hidden">
