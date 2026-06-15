@@ -14,7 +14,7 @@ export const ManagePromotionsPage: React.FC = () => {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3; // 3 items per page to show paginator clearly
+  const itemsPerPage = 10; // 10 items per page as requested
 
   // Reset pagination on search term change
   useEffect(() => {
