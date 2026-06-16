@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { restfulApi, Product } from '../../../shared/services/api';
-import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw, Upload, Play, Video } from 'lucide-react';
 import { Pagination } from '../../../shared/components/ui/Pagination';
+import { base64ToBlobUrl } from '../utils/mockData';
 
 export const ManageProductsPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -29,13 +30,16 @@ export const ManageProductsPage: React.FC = () => {
     stock: '',
     category: 'อาหารแห้งและเครื่องปรุง',
     imageUrl: '',
+    videoUrl: '',
     description: ''
   });
   
   const [formError, setFormError] = useState<string | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -66,9 +70,11 @@ export const ManageProductsPage: React.FC = () => {
       stock: '',
       category: 'อาหารแห้งและเครื่องปรุง',
       imageUrl: '',
+      videoUrl: '',
       description: ''
     });
     setImagePreview(null);
+    setVideoPreview(null);
     setFormError(null);
     setModalOpen(true);
   };
@@ -81,9 +87,11 @@ export const ManageProductsPage: React.FC = () => {
       stock: product.stock.toString(),
       category: product.category,
       imageUrl: product.imageUrl,
+      videoUrl: product.videoUrl || '',
       description: product.description
     });
     setImagePreview(product.imageUrl || null);
+    setVideoPreview(product.videoUrl ? (product.videoUrl.startsWith('data:') ? base64ToBlobUrl(product.videoUrl) : product.videoUrl) : null);
     setFormError(null);
     setModalOpen(true);
   };
@@ -159,6 +167,59 @@ export const ManageProductsPage: React.FC = () => {
     setImagePreview(null);
   };
 
+  const handleVideoFileChange = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      setFormError('กรุณาเลือกไฟล์วิดีโอเท่านั้น (MP4, WebM, OGG)');
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setFormError('ขนาดวิดีโอต้องไม่เกิน 15MB เพื่อป้องกันความล่าช้าในการส่งข้อมูล');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setVideoPreview(objectUrl);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      setFormData(prev => ({ ...prev, videoUrl: base64String }));
+      setFormError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVideoFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleVideoFileChange(file);
+    }
+  };
+
+  const removeVideo = () => {
+    setFormData(prev => ({ ...prev, videoUrl: '' }));
+    setVideoPreview(null);
+  };
+
+  const handleVideoDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingVideo(true);
+  };
+
+  const handleVideoDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingVideo(false);
+  };
+
+  const handleVideoDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingVideo(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleVideoFileChange(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -185,7 +246,8 @@ export const ManageProductsPage: React.FC = () => {
         price: Number(formData.price),
         stock: Number(formData.stock),
         category: formData.category,
-        imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+        imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+        videoUrl: formData.videoUrl,
         description: formData.description
       };
 
@@ -304,8 +366,13 @@ export const ManageProductsPage: React.FC = () => {
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-5 pl-8">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-100">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 relative">
                           <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                          {p.videoUrl && (
+                            <div className="absolute inset-0 bg-slate-950/45 flex items-center justify-center text-white" title="สินค้านี้มีวิดีโอตัวอย่าง">
+                              <Play className="w-5 h-5 fill-current text-white animate-pulse" />
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="p-5 font-bold text-slate-900">
@@ -516,6 +583,66 @@ export const ManageProductsPage: React.FC = () => {
                     </span>
                     <span className="text-[13px] text-slate-400 mt-1.5">
                       รองรับไฟล์ PNG, JPG, JPEG, WebP (ขนาดไม่เกิน 2MB)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Video Upload Zone */}
+              <div>
+                <label className="block text-[16px] font-bold text-slate-700 mb-2">วิดีโอตัวอย่างสินค้า (ไม่บังคับ)</label>
+                
+                {videoPreview ? (
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 group aspect-video bg-slate-950 flex items-center justify-center">
+                    <video 
+                      src={videoPreview} 
+                      controls
+                      className="max-h-full max-w-full object-contain" 
+                    />
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                      <label className="cursor-pointer px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl text-sm transition-all shadow-md">
+                        เปลี่ยนวิดีโอ
+                        <input 
+                          type="file" 
+                          accept="video/*" 
+                          onChange={handleVideoFileInputChange} 
+                          className="hidden" 
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        className="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-xl text-sm transition-all shadow-md"
+                      >
+                        ลบวิดีโอ
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={handleVideoDragOver}
+                    onDragLeave={handleVideoDragLeave}
+                    onDrop={handleVideoDrop}
+                    className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                      isDraggingVideo
+                        ? 'border-primary-500 bg-primary-50/50 scale-[0.98]'
+                        : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50/50'
+                    }`}
+                    onClick={() => document.getElementById('product-video-file')?.click()}
+                  >
+                    <input
+                      id="product-video-file"
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoFileInputChange}
+                      className="hidden"
+                    />
+                    <Video className={`w-10 h-10 mb-3 transition-colors ${isDraggingVideo ? 'text-primary-600' : 'text-slate-400'}`} />
+                    <span className="font-bold text-slate-700 text-[16px] text-center">
+                      ลากไฟล์วิดีโอมาวางที่นี่ หรือ <span className="text-primary-600 hover:underline">คลิกเพื่อเลือกไฟล์</span>
+                    </span>
+                    <span className="text-[13px] text-slate-400 mt-1.5">
+                      รองรับไฟล์ MP4, WebM, OGG (ขนาดไม่เกิน 15MB)
                     </span>
                   </div>
                 )}

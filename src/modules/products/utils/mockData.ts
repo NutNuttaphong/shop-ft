@@ -137,40 +137,73 @@ export const getShopFollowerCount = (shopName: string): number => {
   return isShopFollowed(shopName) ? baseFollowers + 1 : baseFollowers;
 };
 
+export const base64ToBlobUrl = (base64Data: string): string => {
+  try {
+    const parts = base64Data.split(';base64,');
+    if (parts.length < 2) return base64Data;
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+      uInt8Array[i] = raw.charCodeAt(i);
+    }
+    const blob = new Blob([uInt8Array], { type: contentType });
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    console.error('Failed to convert base64 to blob url', e);
+    return base64Data;
+  }
+};
+
 // 3. Media Gallery (Images & Videos) Generator based on Category/ID
-export const getProductMedia = (_productId: string, primaryImageUrl: string, category: string): ProductMedia[] => {
+export const getProductMedia = (_productId: string, primaryImageUrl: string, category: string, videoUrl?: string): ProductMedia[] => {
   const mediaList: ProductMedia[] = [];
   
   // 1. Primary image (always first)
   mediaList.push({ type: 'image', url: primaryImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80' });
   
+  // 2. If a custom video is uploaded, show it
+  if (videoUrl) {
+    const finalVideoUrl = videoUrl.startsWith('data:') ? base64ToBlobUrl(videoUrl) : videoUrl;
+    mediaList.push({ type: 'video', url: finalVideoUrl });
+  }
+
   const normCategory = category ? category.trim() : 'ทั่วไป';
   
-  // 2. Extra images based on category
+  // 3. Extra images based on category
   if (normCategory.includes('ผัก')) {
     mediaList.push(
       { type: 'image', url: 'https://images.unsplash.com/photo-1566385101042-1a010c129fa6?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?auto=format&fit=crop&w=800&q=80' },
-      { type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-fresh-vegetables-being-washed-in-a-sink-40546-large.mp4' }
+      { type: 'image', url: 'https://images.unsplash.com/photo-1597362925123-77861d3fbac7?auto=format&fit=crop&w=800&q=80' }
     );
+    if (!videoUrl) {
+      mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-fresh-vegetables-being-washed-in-a-sink-40546-large.mp4' });
+    }
   } else if (normCategory.includes('ผลไม้')) {
     mediaList.push(
       { type: 'image', url: 'https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=800&q=80' },
-      { type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-fresh-red-apples-covered-in-water-droplets-34287-large.mp4' }
+      { type: 'image', url: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=800&q=80' }
     );
+    if (!videoUrl) {
+      mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-fresh-red-apples-covered-in-water-droplets-34287-large.mp4' });
+    }
   } else if (normCategory.includes('เนื้อ') || normCategory.includes('ทะเล') || normCategory.includes('สัตว์')) {
     mediaList.push(
       { type: 'image', url: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80' },
-      { type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-cutting-raw-meat-on-a-wooden-board-40618-large.mp4' }
+      { type: 'image', url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80' }
     );
+    if (!videoUrl) {
+      mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-cutting-raw-meat-on-a-wooden-board-40618-large.mp4' });
+    }
   } else {
     mediaList.push(
       { type: 'image', url: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1488459718432-010558b15930?auto=format&fit=crop&w=800&q=80' },
-      { type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-grocery-shopping-in-the-supermarket-41584-large.mp4' }
+      { type: 'image', url: 'https://images.unsplash.com/photo-1488459718432-010558b15930?auto=format&fit=crop&w=800&q=80' }
     );
+    if (!videoUrl) {
+      mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-grocery-shopping-in-the-supermarket-41584-large.mp4' });
+    }
   }
   
   return mediaList;

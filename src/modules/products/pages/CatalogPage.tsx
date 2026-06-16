@@ -181,6 +181,7 @@ export const CatalogPage: React.FC = () => {
         setError(response.error);
       } else {
         const data = response.data || [];
+        console.log('Fetched products data:', data);
         setProducts(data);
         
         // Extract categories dynamically
@@ -316,8 +317,10 @@ export const CatalogPage: React.FC = () => {
     setSelectedProduct(product);
     setDetailQuantity(1);
     
+    console.log('Selected product in Catalog:', product);
     // Media
-    const media = getProductMedia(product.id, product.imageUrl, product.category);
+    const media = getProductMedia(product.id, product.imageUrl, product.category, product.videoUrl);
+    console.log('Generated media items for details:', media);
     setModalMedia(media);
     setActiveMediaIndex(0);
     

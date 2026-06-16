@@ -22,6 +22,7 @@ export interface Product {
   description: string;
   category: string;
   imageUrl: string;
+  videoUrl?: string;
   stock: number;
   createdAt?: string;
 }
