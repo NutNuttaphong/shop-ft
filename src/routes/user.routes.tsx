@@ -2,6 +2,7 @@ import { RouteObject } from 'react-router-dom';
 import { RoleGuard } from '../role/guards/RoleGuard';
 import { MainLayout } from '../shared/components/layout/MainLayout';
 import { CatalogPage } from '../modules/products/pages/CatalogPage';
+import { ProductDetailPage } from '../modules/products/pages/ProductDetailPage';
 import { CartPage } from '../modules/cart/pages/CartPage';
 import { PromotionsPage } from '../modules/promotions/pages/PromotionsPage';
 import { OrdersPage } from '../modules/cart/pages/OrdersPage';
@@ -14,6 +15,16 @@ export const userRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
           <CatalogPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/products/:id',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <ProductDetailPage />
         </MainLayout>
       </RoleGuard>
     ),

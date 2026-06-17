@@ -28,7 +28,7 @@ export const ManageProductsPage: React.FC = () => {
     name: '',
     price: '',
     stock: '',
-    category: 'อาหารแห้งและเครื่องปรุง',
+    category: 'อิเล็กทรอนิกส์',
     imageUrl: '',
     videoUrl: '',
     description: ''
@@ -68,7 +68,7 @@ export const ManageProductsPage: React.FC = () => {
       name: '',
       price: '',
       stock: '',
-      category: 'อาหารแห้งและเครื่องปรุง',
+      category: 'อิเล็กทรอนิกส์',
       imageUrl: '',
       videoUrl: '',
       description: ''
@@ -520,10 +520,12 @@ export const ManageProductsPage: React.FC = () => {
                   onChange={handleInputChange}
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:border-primary-500 focus:outline-none transition-colors"
                 >
-                  <option value="อาหารแห้งและเครื่องปรุง">อาหารแห้งและเครื่องปรุง</option>
-                  <option value="เครื่องดื่ม">เครื่องดื่ม</option>
-                  <option value="อาหารสด">อาหารสด</option>
-                  <option value="ของใช้ในครัวเรือน">ของใช้ในครัวเรือน</option>
+                  <option value="อิเล็กทรอนิกส์">อิเล็กทรอนิกส์</option>
+                  <option value="เสื้อผ้าและแฟชั่น">เสื้อผ้าและแฟชั่น</option>
+                  <option value="เครื่องใช้ในบ้าน">เครื่องใช้ในบ้าน</option>
+                  <option value="สุขภาพและความงาม">สุขภาพและความงาม</option>
+                  <option value="ซูเปอร์มาร์เก็ตและอาหาร">ซูเปอร์มาร์เก็ตและอาหาร</option>
+                  <option value="กีฬาและกิจกรรมกลางแจ้ง">กีฬาและกิจกรรมกลางแจ้ง</option>
                   <option value="อื่นๆ">อื่นๆ</option>
                 </select>
               </div>

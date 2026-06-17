@@ -8,16 +8,16 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0284c7', // main primary color - bright but readable
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: '#fff1f2',
+          100: '#ffe4e6',
+          200: '#fecdd3',
+          300: '#fda4af',
+          400: '#fb7185',
+          500: '#f43f5e', // main primary color - Vibrant Rose Red (Lazada/Modern Retail style)
+          600: '#e11d48',
+          700: '#be123c',
+          800: '#9f1239',
+          900: '#881337',
         },
         success: {
           50: '#f0fdf4',
