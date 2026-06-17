@@ -18,7 +18,8 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  TrendingUp
+  TrendingUp,
+  Paperclip
 } from 'lucide-react';
 
 interface LiveStream {
@@ -83,6 +84,53 @@ export const SocialCommercePage: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [unreadContacts, setUnreadContacts] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Admin Chat Media States for Social Commerce
+  const [selectedFileSC, setSelectedFileSC] = useState<File | null>(null);
+  const [mediaPreviewSC, setMediaPreviewSC] = useState<string | null>(null);
+  const [mediaTypeSC, setMediaTypeSC] = useState<'image' | 'video' | null>(null);
+  const [chatErrorSC, setChatErrorSC] = useState<string | null>(null);
+  const fileInputRefSC = useRef<HTMLInputElement>(null);
+
+  const handleFileChangeSC = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setChatErrorSC('กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น');
+      return;
+    }
+
+    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+      setChatErrorSC('ขนาดรูปภาพต้องไม่เกิน 2MB');
+      return;
+    }
+
+    if (file.type.startsWith('video/') && file.size > 15 * 1024 * 1024) {
+      setChatErrorSC('ขนาดวิดีโอต้องไม่เกิน 15MB');
+      return;
+    }
+
+    setChatErrorSC(null);
+    setSelectedFileSC(file);
+    const isVid = file.type.startsWith('video/');
+    setMediaTypeSC(isVid ? 'video' : 'image');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMediaPreviewSC(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSelectedFileSC = () => {
+    setSelectedFileSC(null);
+    setMediaPreviewSC(null);
+    setMediaTypeSC(null);
+    if (fileInputRefSC.current) {
+      fileInputRefSC.current.value = '';
+    }
+  };
 
   // 2. Shopee Live States
   const [, setStreams] = useState<LiveStream[]>([]);
@@ -232,13 +280,20 @@ export const SocialCommercePage: React.FC = () => {
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedContact || !chatInput.trim()) return;
+    if (!selectedContact || (!chatInput.trim() && !mediaPreviewSC)) return;
     const text = chatInput.trim();
+    const mediaUrlToSend = mediaPreviewSC;
+    const mediaTypeToSend = mediaTypeSC;
+
     setChatInput('');
+    removeSelectedFileSC();
+
     try {
       const res = await restfulApi.post<any>('/api/chat/send', {
         receiver: selectedContact,
-        message: text
+        message: text,
+        mediaUrl: mediaUrlToSend,
+        mediaType: mediaTypeToSend
       });
       if (res.data) {
         setChatMessages(prev => [...prev, res.data]);
@@ -513,15 +568,40 @@ export const SocialCommercePage: React.FC = () => {
                   {/* Messages list */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {chatMessages.map((msg, i) => {
-                      const isMe = msg.sender === 'admin';
+                      const isMe = msg.sender === 'admin@1234';
                       return (
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-md p-3 rounded-2xl text-xs font-semibold leading-relaxed shadow-xs ${
+                          <div className={`max-w-md rounded-2xl text-xs font-semibold leading-relaxed shadow-xs overflow-hidden ${
                             isMe 
                               ? 'bg-pink-600 text-white rounded-tr-none' 
                               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                           }`}>
-                            <p>{msg.message}</p>
+                            {/* Render Media attachment if present */}
+                            {msg.mediaUrl && (
+                              <div className="p-1 max-w-[280px]">
+                                {msg.mediaType === 'image' ? (
+                                  <img
+                                    src={msg.mediaUrl}
+                                    alt="Uploaded Media"
+                                    className="rounded-xl w-full object-cover max-h-56 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+                                    onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                  />
+                                ) : msg.mediaType === 'video' ? (
+                                  <video
+                                    src={msg.mediaUrl}
+                                    controls
+                                    className="rounded-xl w-full object-cover max-h-56"
+                                  />
+                                ) : null}
+                              </div>
+                            )}
+
+                            {/* Render text message if present */}
+                            {msg.message && (
+                              <div className="px-3 py-2.5">
+                                <p>{msg.message}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -529,18 +609,70 @@ export const SocialCommercePage: React.FC = () => {
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* Media Preview Box */}
+                  {mediaPreviewSC && (
+                    <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3 mx-4 rounded-xl">
+                      <div className="flex items-center gap-2 max-w-[80%]">
+                        {mediaTypeSC === 'image' ? (
+                          <img
+                            src={mediaPreviewSC}
+                            alt="Preview"
+                            className="w-10 h-10 object-cover rounded-lg border border-slate-300"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center border border-slate-300">
+                            <span className="text-[9px] font-bold text-slate-500">VIDEO</span>
+                          </div>
+                        )}
+                        <span className="text-xs text-slate-600 truncate font-semibold">
+                          {selectedFileSC?.name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeSelectedFileSC}
+                        className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Error Box */}
+                  {chatErrorSC && (
+                    <div className="mx-4 px-4 py-1.5 bg-rose-50 text-rose-600 text-xs font-bold border rounded-xl border-rose-100">
+                      {chatErrorSC}
+                    </div>
+                  )}
+
                   {/* Input Form */}
-                  <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-200 flex gap-2.5">
+                  <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-200 flex gap-2.5 items-center">
+                    <input
+                      type="file"
+                      ref={fileInputRefSC}
+                      onChange={handleFileChangeSC}
+                      accept="image/*,video/*"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRefSC.current?.click()}
+                      className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                      title="แนบรูปภาพหรือวิดีโอ"
+                    >
+                      <Paperclip className="w-5 h-5" />
+                    </button>
                     <input
                       type="text"
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="พิมพ์ข้อความคุยกับลูกค้า..."
+                      placeholder={mediaPreviewSC ? "เพิ่มคำอธิบายใต้ภาพ..." : "พิมพ์ข้อความคุยกับลูกค้า..."}
                       className="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:border-pink-500 focus:outline-none text-xs font-bold"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-pink-50"
+                      disabled={!chatInput.trim() && !mediaPreviewSC}
+                      className="px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center justify-center gap-1.5 text-xs shadow-md shadow-pink-50 disabled:opacity-40"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>ส่ง</span>

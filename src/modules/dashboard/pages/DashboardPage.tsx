@@ -9,7 +9,8 @@ import {
   DollarSign,
   Send,
   MessageSquare,
-  X
+  X,
+  Paperclip
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -24,6 +25,53 @@ export const DashboardPage: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [unreadContacts, setUnreadContacts] = useState<Set<string>>(new Set());
+
+  // Admin Chat Media States
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setChatError('กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น');
+      return;
+    }
+
+    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+      setChatError('ขนาดรูปภาพต้องไม่เกิน 2MB');
+      return;
+    }
+
+    if (file.type.startsWith('video/') && file.size > 15 * 1024 * 1024) {
+      setChatError('ขนาดวิดีโอต้องไม่เกิน 15MB');
+      return;
+    }
+
+    setChatError(null);
+    setSelectedFile(file);
+    const isVid = file.type.startsWith('video/');
+    setMediaType(isVid ? 'video' : 'image');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMediaPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Shipping Label States
   const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<any | null>(null);
@@ -152,15 +200,21 @@ export const DashboardPage: React.FC = () => {
 
   const handleSendAdminMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedContact || !chatInput.trim()) return;
+    if (!selectedContact || (!chatInput.trim() && !mediaPreview)) return;
 
     const msgText = chatInput.trim();
+    const mediaUrlToSend = mediaPreview;
+    const mediaTypeToSend = mediaType;
+
     setChatInput('');
+    removeSelectedFile();
 
     try {
       const res = await restfulApi.post<any>('/api/chat/send', {
         receiver: selectedContact,
-        message: msgText
+        message: msgText,
+        mediaUrl: mediaUrlToSend,
+        mediaType: mediaTypeToSend
       });
       if (res.data) {
         setChatMessages(prev => [...prev, res.data]);
@@ -576,20 +630,45 @@ export const DashboardPage: React.FC = () => {
                 {/* Message list */}
                 <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
                   {chatMessages.map((msg) => {
-                    const isOwn = msg.sender === 'admin';
+                    const isOwn = msg.sender === 'admin@1234';
                     return (
                       <div
                         key={msg.id}
                         className={`flex flex-col max-w-[80%] ${isOwn ? 'self-end items-end' : 'self-start items-start'}`}
                       >
                         <div
-                          className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm ${
+                          className={`rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm overflow-hidden ${
                             isOwn
                               ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-br-none'
                               : 'bg-white text-slate-800 rounded-bl-none border border-slate-200/55'
                           }`}
                         >
-                          {msg.message}
+                          {/* Render Media attachment if present */}
+                          {msg.mediaUrl && (
+                            <div className="p-1 max-w-[280px]">
+                              {msg.mediaType === 'image' ? (
+                                <img
+                                  src={msg.mediaUrl}
+                                  alt="Uploaded Media"
+                                  className="rounded-xl w-full object-cover max-h-56 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+                                  onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                />
+                              ) : msg.mediaType === 'video' ? (
+                                <video
+                                  src={msg.mediaUrl}
+                                  controls
+                                  className="rounded-xl w-full object-cover max-h-56"
+                                />
+                              ) : null}
+                            </div>
+                          )}
+
+                          {/* Render text message if present */}
+                          {msg.message && (
+                            <div className="px-4 py-2.5">
+                              {msg.message}
+                            </div>
+                          )}
                         </div>
                         <span className="text-[10px] text-slate-400 mt-1 px-1 font-semibold">
                           {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
@@ -600,18 +679,69 @@ export const DashboardPage: React.FC = () => {
                   <div ref={messagesEndRef} />
                 </div>
 
+                {/* Media Preview Box */}
+                {mediaPreview && (
+                  <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 max-w-[80%]">
+                      {mediaType === 'image' ? (
+                        <img
+                          src={mediaPreview}
+                          alt="Preview"
+                          className="w-10 h-10 object-cover rounded-lg border border-slate-300"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center border border-slate-300">
+                          <span className="text-[9px] font-bold text-slate-500">VIDEO</span>
+                        </div>
+                      )}
+                      <span className="text-xs text-slate-600 truncate font-semibold">
+                        {selectedFile?.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeSelectedFile}
+                      className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Error Box */}
+                {chatError && (
+                  <div className="px-4 py-1.5 bg-rose-50 text-rose-600 text-xs font-bold border-t border-rose-100">
+                    {chatError}
+                  </div>
+                )}
+
                 {/* Chat Input Form */}
                 <form onSubmit={handleSendAdminMessage} className="p-3 bg-white border-t border-slate-200/80 flex gap-2 items-center">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*,video/*"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                    title="แนบรูปภาพหรือวิดีโอ"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
                   <input
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder={`ตอบกลับ ${selectedContact}...`}
+                    placeholder={mediaPreview ? "เพิ่มคำอธิบายใต้ภาพ..." : `ตอบกลับ ${selectedContact}...`}
                     className="flex-1 px-4 py-2 border border-slate-200 rounded-2xl text-[13px] focus:outline-none focus:border-primary-500 font-medium placeholder-slate-400 bg-slate-50 focus:bg-white transition-all"
                   />
                   <button
                     type="submit"
-                    disabled={!chatInput.trim()}
+                    disabled={!chatInput.trim() && !mediaPreview}
                     className="p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-40 transition-colors"
                   >
                     <Send className="w-4 h-4" />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, AlertCircle } from 'lucide-react';
+import { MessageSquare, Send, X, AlertCircle, Paperclip } from 'lucide-react';
 import { restfulApi } from '../../services/api';
 import { useAuth } from '../../../modules/auth/hooks/useAuth';
 
@@ -8,6 +8,8 @@ interface Message {
   sender: string;
   receiver: string;
   message: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
   timestamp: string;
 }
 
@@ -19,7 +21,52 @@ export const ChatWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setError('กรุณาเลือกไฟล์รูปภาพหรือวิดีโอเท่านั้น');
+      return;
+    }
+
+    if (file.type.startsWith('image/') && file.size > 2 * 1024 * 1024) {
+      setError('ขนาดรูปภาพต้องไม่เกิน 2MB');
+      return;
+    }
+
+    if (file.type.startsWith('video/') && file.size > 15 * 1024 * 1024) {
+      setError('ขนาดวิดีโอต้องไม่เกิน 15MB');
+      return;
+    }
+
+    setError(null);
+    setSelectedFile(file);
+    const isVid = file.type.startsWith('video/');
+    setMediaType(isVid ? 'video' : 'image');
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMediaPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSelectedFile = () => {
+    setSelectedFile(null);
+    setMediaPreview(null);
+    setMediaType(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // If user is Admin or not logged in, don't show the chat widget
   if (!user || user.role === 'admin') {
@@ -34,7 +81,7 @@ export const ChatWidget: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await restfulApi.get<Message[]>('/api/chat/history?contact=admin');
+      const res = await restfulApi.get<Message[]>('/api/chat/history?contact=admin@1234');
       if (res.data) {
         setMessages(res.data);
       } else if (res.error) {
@@ -68,7 +115,7 @@ export const ChatWidget: React.FC = () => {
       const chatMsg = customEvent.detail as Message;
       
       // If the message is part of our conversation (with admin)
-      if (chatMsg.sender === 'admin' || chatMsg.receiver === 'admin') {
+      if (chatMsg.sender === 'admin@1234' || chatMsg.receiver === 'admin@1234') {
         setMessages(prev => {
           if (prev.some(m => m.id === chatMsg.id)) return prev;
           return [...prev, chatMsg];
@@ -84,15 +131,21 @@ export const ChatWidget: React.FC = () => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !mediaPreview) return;
 
     const textToSend = inputText.trim();
+    const mediaUrlToSend = mediaPreview;
+    const mediaTypeToSend = mediaType;
+
     setInputText('');
+    removeSelectedFile();
 
     try {
       const res = await restfulApi.post<Message>('/api/chat/send', {
-        receiver: 'admin',
-        message: textToSend
+        receiver: 'admin@1234',
+        message: textToSend,
+        mediaUrl: mediaUrlToSend,
+        mediaType: mediaTypeToSend
       });
 
       if (res.data) {
@@ -183,13 +236,38 @@ export const ChatWidget: React.FC = () => {
                     className={`flex flex-col max-w-[80%] ${isOwn ? 'self-end items-end' : 'self-start items-start'}`}
                   >
                     <div
-                      className={`px-4 py-2.5 rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm ${
+                      className={`rounded-2xl text-[13px] font-medium leading-relaxed shadow-sm overflow-hidden ${
                         isOwn
                           ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-br-none'
                           : 'bg-white text-slate-800 rounded-bl-none border border-slate-100'
                       }`}
                     >
-                      {msg.message}
+                      {/* Render Media attachment if present */}
+                      {msg.mediaUrl && (
+                        <div className="p-1 max-w-[240px]">
+                          {msg.mediaType === 'image' ? (
+                            <img
+                              src={msg.mediaUrl}
+                              alt="Uploaded Media"
+                              className="rounded-xl w-full object-cover max-h-48 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
+                              onClick={() => window.open(msg.mediaUrl, '_blank')}
+                            />
+                          ) : msg.mediaType === 'video' ? (
+                            <video
+                              src={msg.mediaUrl}
+                              controls
+                              className="rounded-xl w-full object-cover max-h-48"
+                            />
+                          ) : null}
+                        </div>
+                      )}
+                      
+                      {/* Render text message if present */}
+                      {msg.message && (
+                        <div className="px-4 py-2.5">
+                          {msg.message}
+                        </div>
+                      )}
                     </div>
                     <span className="text-[10px] text-slate-400 mt-1 px-1 font-semibold">
                       {formatTime(msg.timestamp)}
@@ -201,18 +279,62 @@ export const ChatWidget: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Media Preview Box */}
+          {mediaPreview && (
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between gap-3 animate-fade-in">
+              <div className="flex items-center gap-2 max-w-[80%]">
+                {mediaType === 'image' ? (
+                  <img
+                    src={mediaPreview}
+                    alt="Preview"
+                    className="w-10 h-10 object-cover rounded-lg border border-slate-300"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-slate-200 rounded-lg flex items-center justify-center border border-slate-300">
+                    <span className="text-[9px] font-bold text-slate-500">VIDEO</span>
+                  </div>
+                )}
+                <span className="text-xs text-slate-600 truncate font-semibold">
+                  {selectedFile?.name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={removeSelectedFile}
+                className="text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-200 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Chat Input Form */}
           <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-100 flex gap-2 items-center">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*,video/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+              title="แนบรูปภาพหรือวิดีโอ"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="พิมพ์ข้อความของคุณ..."
+              placeholder={mediaPreview ? "เพิ่มคำอธิบายใต้ภาพ..." : "พิมพ์ข้อความของคุณ..."}
               className="flex-1 px-4 py-2 border border-slate-200 rounded-2xl text-[13px] focus:outline-none focus:border-primary-500 font-medium placeholder-slate-400 bg-slate-50 focus:bg-white transition-all"
             />
             <button
               type="submit"
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() && !mediaPreview}
               className="p-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-40 disabled:hover:bg-primary-600 transition-colors"
             >
               <Send className="w-4 h-4" />
