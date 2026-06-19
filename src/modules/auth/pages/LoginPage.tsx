@@ -122,7 +122,7 @@ export const LoginPage: React.FC = () => {
           <div className="absolute top-4 right-4 bg-white/10 px-3 py-1 rounded-full text-xs font-medium tracking-wide">
             ระบบจัดจำหน่ายสินค้า
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">สบายดีมาร์เก็ต</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-2">FRIST SHOP</h1>
           <p className="text-primary-100 text-sm max-w-sm mx-auto leading-relaxed">
             {isRegisterMode 
               ? 'สมัครสมาชิกบัญชีผู้ซื้อเพื่อเริ่มต้นช้อปสินค้าผักสด เนื้อสัตว์ และของใช้ราคาส่งทันที' 
@@ -401,7 +401,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex items-center justify-between text-slate-500 text-xs">
-          <span>© 2026 ระบบการค้าออนไลน์ สบายดีมาร์เก็ต</span>
+          <span>© 2026 ระบบการค้าออนไลน์ FRIST SHOP</span>
           <span className="font-semibold text-primary-600 hover:underline cursor-pointer">ช่วยเหลือและแนะนำ</span>
         </div>
       </div>

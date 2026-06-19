@@ -124,8 +124,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <ShoppingBag className="w-6 h-6" />
                 </div>
                 <div>
-                  <span className="font-extrabold text-2xl tracking-tight text-slate-900 block">สบายดีมาร์เก็ต</span>
-                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Sabaidee Market</span>
+                  <span className="font-extrabold text-2xl tracking-tight text-slate-900 block">FRIST SHOP</span>
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">First Shop Online</span>
                 </div>
               </div>
 
@@ -415,7 +415,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[95rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+      <main className="flex-1 max-w-[85rem] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
         {children}
       </main>
 
@@ -423,7 +423,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <footer className="bg-white border-t border-slate-200 py-8 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-[15px]">
           <div className="flex items-center space-x-2">
-            <span className="font-bold text-slate-600 text-[16px]">สบายดีมาร์เก็ต</span>
+            <span className="font-bold text-slate-600 text-[16px]">FRIST SHOP</span>
             <span>- มุ่งมั่นมอบบริการสะดวกสบายและเข้าถึงได้สำหรับทุกเพศทุกวัย</span>
           </div>
           <div>

@@ -192,10 +192,10 @@ export const ChatWidget: React.FC = () => {
           <div className="bg-gradient-to-r from-primary-600 to-indigo-600 px-5 py-4 text-white flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20 font-bold text-white text-[15px]">
-                SB
+                FS
               </div>
               <div>
-                <h4 className="font-extrabold text-[15px] leading-tight">สบายดีมาร์เก็ต (ร้านค้า)</h4>
+                <h4 className="font-extrabold text-[15px] leading-tight">FRIST SHOP (ร้านค้า)</h4>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
                   <span className="text-[11px] text-primary-100 font-medium">ออนไลน์</span>
@@ -224,7 +224,7 @@ export const ChatWidget: React.FC = () => {
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 p-6 text-center">
                 <MessageSquare className="w-10 h-10 text-slate-300" />
-                <p className="text-xs font-semibold">ยินดีต้อนรับสู่ สบายดีมาร์เก็ต!</p>
+                <p className="text-xs font-semibold">ยินดีต้อนรับสู่ FRIST SHOP!</p>
                 <p className="text-[10px] text-slate-400">คุณสามารถส่งข้อความสอบถาม แนะนำสินค้า หรือปรึกษาปัญหาหลังการขายได้ทันทีค่ะ</p>
               </div>
             ) : (

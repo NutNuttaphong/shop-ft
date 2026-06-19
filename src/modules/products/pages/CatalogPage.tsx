@@ -24,7 +24,7 @@ const NEWS_ITEMS: NewsItem[] = [
   {
     id: 1,
     tag: 'โปรโมชันพิเศษ',
-    title: 'ฉลองเปิดตัวระบบ สบายดีมาร์เก็ต 🛒',
+    title: 'ฉลองเปิดตัวระบบ FRIST SHOP 🛒',
     description: 'รับส่วนลดพิเศษทันที 10% สำหรับสมาชิกใหม่ทุกคน เพียงใช้คูปองส่วนลดที่กำหนดหน้าชำระเงิน ช้อปสินค้าสุขภาพดีวันนี้เลย!',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85',
     ctaText: 'ช้อปผักสดวันนี้',
@@ -75,22 +75,22 @@ export const CatalogPage: React.FC = () => {
   
   const [searchParams] = useSearchParams();
 
-  const handleNewsClick = (action: string) => {
-    if (action === 'vegetables') {
-      const vegCategory = categories.find(c => c.includes('ผัก') || c.includes('ผลไม้'));
-      if (vegCategory) {
-        setSelectedCategory(vegCategory);
-      } else {
-        setSelectedCategory('ทั้งหมด');
-      }
-      const element = document.getElementById('catalog-grid-top');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    } else {
-      setActiveNewsModal(action);
-    }
-  };
+  // const handleNewsClick = (action: string) => {
+  //   if (action === 'vegetables') {
+  //     const vegCategory = categories.find(c => c.includes('ผัก') || c.includes('ผลไม้'));
+  //     if (vegCategory) {
+  //       setSelectedCategory(vegCategory);
+  //     } else {
+  //       setSelectedCategory('ทั้งหมด');
+  //     }
+  //     const element = document.getElementById('catalog-grid-top');
+  //     if (element) {
+  //       element.scrollIntoView({ behavior: 'smooth' });
+  //     }
+  //   } else {
+  //     setActiveNewsModal(action);
+  //   }
+  // };
 
   // Read initial category from URL if present
   useEffect(() => {
@@ -233,17 +233,17 @@ export const CatalogPage: React.FC = () => {
               }`}
             >
               {/* Background Image with Dark Overlay */}
-              <div className="absolute inset-0 bg-slate-950">
+              <div className="absolute inset-0 bg-slate-950"  >
                 <img
                   src={news.image}
                   alt={news.title}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/30 to-transparent" />
+                {/* <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/30 to-transparent" /> */}
               </div>
 
               {/* Content */}
-              <div className="absolute inset-0 p-6 sm:p-10 flex flex-col justify-between z-20">
+              {/* <div className="absolute inset-0 p-6 sm:p-10 flex flex-col justify-between z-20">
                 <div className="max-w-xl space-y-3">
                   <span className="inline-flex items-center gap-1.5 bg-primary-600/95 text-white px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
                     <Sparkles className="w-3.5 h-3.5" /> {news.tag}
@@ -264,7 +264,7 @@ export const CatalogPage: React.FC = () => {
                     <span>{news.ctaText}</span>
                   </button>
                 </div>
-              </div>
+              </div> */}
             </div>
           );
         })}
@@ -479,7 +479,7 @@ export const CatalogPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
                 {paginatedProducts.map((product) => {
                   const outOfStock = product.stock <= 0;
                   const ratingInfo = getAverageRating(product.id, product.category);
@@ -605,7 +605,7 @@ export const CatalogPage: React.FC = () => {
                 <h3 className="text-xl font-extrabold text-slate-950">รายละเอียดเงื่อนไขจัดส่งฟรี 🚚</h3>
                 <div className="space-y-3 text-slate-600 text-sm leading-relaxed font-medium">
                   <p>
-                    สบายดีมาร์เก็ต มอบสิทธิพิเศษบริการจัดส่งฟรีทั่วพื้นที่สำหรับยอดสั่งซื้อตั้งแต่ <strong>500 บาทขึ้นไป</strong>
+                    FRIST SHOP มอบสิทธิพิเศษบริการจัดส่งฟรีทั่วพื้นที่สำหรับยอดสั่งซื้อตั้งแต่ <strong>500 บาทขึ้นไป</strong>
                   </p>
                   <ul className="list-disc pl-5 space-y-1.5">
                     <li>ยอดสั่งซื้อน้อยกว่า 500 บาท มีค่าจัดส่งเริ่มต้น 40 บาท</li>

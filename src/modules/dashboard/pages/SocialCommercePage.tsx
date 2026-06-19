@@ -1045,9 +1045,9 @@ export const SocialCommercePage: React.FC = () => {
                     <div key={feed.id} className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
                       {/* Visual Header */}
                       <div className="p-4 flex items-center gap-2.5 border-b border-slate-100">
-                        <div className="w-8 h-8 rounded-full bg-pink-600 text-white flex items-center justify-center font-extrabold text-xs">SM</div>
+                        <div className="w-8 h-8 rounded-full bg-pink-600 text-white flex items-center justify-center font-extrabold text-xs">FS</div>
                         <div className="text-xs">
-                          <span className="font-extrabold text-slate-800 block">Sabaidee Market</span>
+                          <span className="font-extrabold text-slate-800 block">FRIST SHOP</span>
                           <span className="text-slate-400 font-semibold block">เมื่อกี้นี้</span>
                         </div>
                       </div>

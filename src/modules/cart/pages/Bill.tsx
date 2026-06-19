@@ -170,14 +170,14 @@ const Bill: React.FC<BillProps> = ({ orderData }) => {
           <div className="flex justify-center items-center gap-1.5">
             <Receipt className="w-5 h-5 text-primary-600 print:text-black" />
             <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
-              SABAIDEE MARKET
+              FRIST SHOP
             </h1>
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-            บริษัท สบายดีมาร์เก็ต จำกัด (มหาชน)
+            บริษัท FRIST SHOP จำกัด (มหาชน)
           </p>
           <p className="text-[10px] text-slate-500 leading-normal max-w-[280px] mx-auto">
-            123 อาคารสบายดี สวนหลวง กรุงเทพฯ 10250
+            123 อาคาร FRIST SHOP สวนหลวง กรุงเทพฯ 10250
           </p>
           <p className="text-[9px] text-slate-400 font-medium">
             เลขประจำตัวผู้เสียภาษี: 0105563001234

@@ -805,8 +805,8 @@ export const DashboardPage: React.FC = () => {
                 {/* Header Row */}
                 <div className="flex justify-between items-start border-b-2 border-black pb-3">
                   <div>
-                    <h4 className="font-black text-lg uppercase tracking-tight">สบายดีมาร์เก็ต</h4>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sabaidee Market</span>
+                    <h4 className="font-black text-lg uppercase tracking-tight">FRIST SHOP</h4>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">First Shop Online</span>
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-bold block">เลขที่ออเดอร์: {selectedOrderForLabel.orderNo}</span>
@@ -819,7 +819,7 @@ export const DashboardPage: React.FC = () => {
                   {/* Sender Address */}
                   <div className="border-r border-black pr-3 space-y-1">
                     <span className="font-bold text-[10px] uppercase text-slate-500 block">ผู้ส่ง (Sender):</span>
-                    <p className="font-black text-slate-900">สบายดีมาร์เก็ต (คลังสินค้ากลาง)</p>
+                    <p className="font-black text-slate-900">FRIST SHOP (คลังสินค้ากลาง)</p>
                     <p className="text-slate-700 font-semibold leading-relaxed">
                       123/45 ถนนพัฒนาการ แขวงสวนหลวง เขตสวนหลวง กรุงเทพมหานคร 10250
                     </p>

@@ -292,7 +292,7 @@ export const ManageProductsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-extrabold text-slate-900">จัดการรายการสินค้า</h1>
-          <p className="text-slate-500 text-[16px]">เพิ่ม แก้ไข หรือลบสินค้าออกจากระบบร้านค้าสบายดีมาร์เก็ต</p>
+          <p className="text-slate-500 text-[16px]">เพิ่ม แก้ไข หรือลบสินค้าออกจากระบบร้านค้า FRIST SHOP</p>
         </div>
         
         <button

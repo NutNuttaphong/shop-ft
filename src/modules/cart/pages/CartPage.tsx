@@ -910,7 +910,7 @@ export const CartPage: React.FC = () => {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="ใส่รหัสคูปอง เช่น SABAIDEE10"
+                    placeholder="ใส่รหัสคูปอง เช่น FRIST10"
                     value={promoCodeInput}
                     onChange={(e) => setPromoCodeInput(e.target.value)}
                     className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500 placeholder-slate-400 font-semibold uppercase"

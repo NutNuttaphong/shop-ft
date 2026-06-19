@@ -27,7 +27,7 @@ export const getShopForProduct = (category: string): Shop => {
   
   if (normalizedCategory.includes('อิเล็กทรอนิกส์')) {
     return {
-      name: 'สบายดี เอนเตอร์เทนเมนท์ & ไอที มอลล์ ⚡',
+      name: 'FRIST SHOP เอนเตอร์เทนเมนท์ & ไอที มอลล์ ⚡',
       avatar: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=150&h=150&q=80',
       category: 'อิเล็กทรอนิกส์',
       followers: 18430,
@@ -63,7 +63,7 @@ export const getShopForProduct = (category: string): Shop => {
     };
   } else if (normalizedCategory.includes('ซูเปอร์มาร์เก็ต') || normalizedCategory.includes('อาหาร') || normalizedCategory.includes('เครื่องปรุง')) {
     return {
-      name: 'สบายดี ไฮเปอร์มาร์เก็ต 🌾',
+      name: 'FRIST SHOP ไฮเปอร์มาร์เก็ต 🌾',
       avatar: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=150&h=150&q=80',
       category: 'ซูเปอร์มาร์เก็ตและอาหาร',
       followers: 24500,
@@ -81,7 +81,7 @@ export const getShopForProduct = (category: string): Shop => {
     };
   } else {
     return {
-      name: 'สบายดี มาร์เก็ต เพลส (สาขาใหญ่) 🛒',
+      name: 'FRIST SHOP มาร์เก็ตเพลส (สาขาใหญ่) 🛒',
       avatar: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?auto=format&fit=crop&w=150&h=150&q=80',
       category: 'สินค้าทั่วไป',
       followers: 35120,

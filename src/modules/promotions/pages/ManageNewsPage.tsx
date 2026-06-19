@@ -18,7 +18,7 @@ const DEFAULT_NEWS: NewsItem[] = [
   {
     id: 1,
     tag: 'โปรโมชันพิเศษ',
-    title: 'ฉลองเปิดตัวระบบ สบายดีมาร์เก็ต 🛒',
+    title: 'ฉลองเปิดตัวระบบ FRIST SHOP 🛒',
     description: 'รับส่วนลดพิเศษทันที 10% สำหรับสมาชิกใหม่ทุกคน เพียงใช้คูปองส่วนลดที่กำหนดหน้าชำระเงิน ช้อปสินค้าสุขภาพดีวันนี้เลย!',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85',
     ctaText: 'ช้อปผักสดวันนี้',
