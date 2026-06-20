@@ -74,3 +74,15 @@
 .animate-bounce-subtle {
   animation: bounceSubtle 2.5s ease-in-out infinite;
 }
+
+@keyframes cartPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22) rotate(-6deg); }
+  55% { transform: scale(0.92) rotate(4deg); }
+  75% { transform: scale(1.06) rotate(-2deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.animate-cart-pop {
+  animation: cartPop 0.6s cubic-bezier(0.25, 1, 0.5, 1) both;
+}

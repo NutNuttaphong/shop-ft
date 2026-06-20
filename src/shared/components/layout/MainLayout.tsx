@@ -4,7 +4,9 @@ import { useAuth } from '../../../modules/auth/hooks/useAuth';
 import { NotificationProvider } from './NotificationContext';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ChatWidget } from './ChatWidget';
+import { restfulApi } from '../../services/api';
 import {
+  Home,
   ShoppingBag,
   ShoppingCart,
   LayoutDashboard,
@@ -77,28 +79,45 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/admin/news', label: 'การจัดการข่าวสาร', icon: Newspaper },
       ]
     : [
+        { path: '/', label: 'หน้าหลัก', icon: Home },
         { path: '/products', label: 'ร้านค้าสั่งซื้อสินค้า', icon: ShoppingBag },
         { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
         { path: '/orders', label: 'ประวัติการสั่งซื้อ', icon: History },
         { path: '/promotions', label: 'โปรโมชั่น', icon: Gift },
       ];
 
-  // Helper to count cart items
-  const getCartCount = () => {
+  const [cartCount, setCartCount] = useState(0);
+
+  // Sync cart count from backend or fallback to local storage
+  const syncCartCount = async () => {
+    try {
+      const res = await restfulApi.get<any[]>('/api/cart');
+      if (res.data && Array.isArray(res.data)) {
+        const count = res.data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        setCartCount(count);
+        localStorage.setItem('app_cart', JSON.stringify(res.data));
+        return;
+      }
+    } catch (e) {
+      console.error('Failed to sync cart from backend', e);
+    }
+
+    // Fallback to localStorage if backend is down
     try {
       const cart = JSON.parse(localStorage.getItem('app_cart') || '[]');
-      return cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0);
+      const count = cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0);
+      setCartCount(count);
     } catch {
-      return 0;
+      setCartCount(0);
     }
   };
 
-  const [cartCount, setCartCount] = useState(getCartCount());
-
-  // Listen to storage events to update cart badge instantly
+  // Listen to storage/cart-updated events to update cart badge instantly
   useEffect(() => {
+    syncCartCount();
+
     const handleStorageChange = () => {
-      setCartCount(getCartCount());
+      syncCartCount();
     };
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('cart-updated', handleStorageChange); // Custom event
@@ -119,7 +138,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             
             {/* Logo */}
             <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center space-x-3">
+              <Link to={user?.role === 'admin' ? '/admin/dashboard' : '/'} className="flex-shrink-0 flex items-center space-x-3 cursor-pointer hover:opacity-90 transition-opacity">
                 <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center text-white shadow-md shadow-primary-100">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
@@ -127,7 +146,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   <span className="font-extrabold text-2xl tracking-tight text-slate-900 block">FRIST SHOP</span>
                   <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">First Shop Online</span>
                 </div>
-              </div>
+              </Link>
 
               {/* Desktop Nav Items */}
               <nav className="hidden md:flex ml-10 space-x-1">
@@ -138,6 +157,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <Link
                       key={item.path}
                       to={item.path}
+                      id={item.path === '/cart' ? 'cart-nav-item' : undefined}
                       className={`flex items-center px-4 py-2.5 rounded-xl font-bold transition-all text-[16px] gap-2 ${
                         isActive
                           ? 'bg-primary-50 text-primary-600 shadow-sm border border-primary-100'
@@ -148,7 +168,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       <span>{item.label}</span>
                       
                       {item.showBadge && cartCount > 0 && (
-                        <span className="ml-1 px-2.5 py-0.5 text-xs font-extrabold bg-danger-500 text-white rounded-full animate-bounce">
+                        <span className="ml-1 px-2.5 py-0.5 text-xs font-extrabold bg-danger-500 text-white rounded-full">
                           {cartCount}
                         </span>
                       )}
@@ -161,46 +181,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             {/* Desktop Right Panel (Accessibility + Profile) */}
             <div className="hidden md:flex items-center space-x-6">
               
-              {/* Text Size Accessibility Controls */}
-              {/* <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
-                <span className="px-2 text-slate-500 flex items-center gap-1 text-sm font-semibold">
-                  <Type className="w-4 h-4" /> ขนาดตัวอักษร:
-                </span>
-                <button
-                  onClick={() => handleTextSizeChange('standard')}
-                  className={`px-3 py-1 rounded-xl font-bold text-xs transition-all ${
-                    textSize === 'standard'
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="ตัวอักษรขนาดปกติ"
-                >
-                  ปกติ
-                </button>
-                <button
-                  onClick={() => handleTextSizeChange('large')}
-                  className={`px-3 py-1 rounded-xl font-bold text-sm transition-all ${
-                    textSize === 'large'
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="ตัวอักษรขนาดใหญ่สำหรับอ่านง่าย"
-                >
-                  ใหญ่
-                </button>
-                <button
-                  onClick={() => handleTextSizeChange('extra-large')}
-                  className={`px-3 py-1 rounded-xl font-bold text-base transition-all ${
-                    textSize === 'extra-large'
-                      ? 'bg-white text-primary-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                  title="ตัวอักษรขนาดใหญ่พิเศษ"
-                >
-                  ใหญ่มาก
-                </button>
-              </div> */}
-
               {user && <NotificationDropdown />}
               {/* User profile card */}
               {user && (
@@ -277,21 +257,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
             {/* Mobile menu button */}
             <div className="flex items-center md:hidden space-x-3">
-              {/* Simple Text Size indicator button for Mobile */}
-              {/* <button
-                onClick={() => {
-                  const nextSize = textSize === 'standard' ? 'large' : textSize === 'large' ? 'extra-large' : 'standard';
-                  handleTextSizeChange(nextSize);
-                }}
-                className="p-2.5 bg-slate-100 rounded-xl border border-slate-200 text-slate-700"
-                title="เปลี่ยนขนาดตัวอักษร"
-              >
-                <Type className="w-5 h-5" />
-              </button> */}
+              {user && user.role === 'user' && (
+                <Link
+                  to="/cart"
+                  id="cart-nav-item-mobile"
+                  className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative cursor-pointer"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 px-2 py-0.5 text-[10px] font-black bg-danger-500 text-white rounded-full">
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              )}
               
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200"
+                className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 cursor-pointer"
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>

@@ -550,7 +550,7 @@ export const ProductDetailPage: React.FC = () => {
 
                     {/* Add to Cart button */}
                     <button
-                      onClick={handleAddToCart}
+                      onClick={() => handleAddToCart()}
                       className="flex-1 bg-gradient-to-r from-[#f43f5e] to-[#ff6b6b] hover:from-[#e11d48] hover:to-[#ff5252] text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:-translate-y-[2px] active:translate-y-0 hover:shadow-lg hover:shadow-primary-600/25 transition-all text-sm whitespace-nowrap"
                     >
                       <span>เพิ่มลงในรถเข็น</span>

@@ -32,7 +32,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({ children, allowedRoles }) 
     if (user.role === 'admin') {
       return <Navigate to="/admin/dashboard" replace />;
     } else if (user.role === 'user') {
-      return <Navigate to="/products" replace />;
+      return <Navigate to="/" replace />;
     }
     return <Navigate to="/login" replace />;
   }

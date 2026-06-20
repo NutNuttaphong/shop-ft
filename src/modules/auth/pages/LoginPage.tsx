@@ -32,7 +32,7 @@ export const LoginPage: React.FC = () => {
       if (user.role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        navigate('/products', { replace: true });
+        navigate('/', { replace: true });
       }
     }
   }, [isAuthenticated, user, navigate]);
@@ -66,7 +66,7 @@ export const LoginPage: React.FC = () => {
         );
         if (result.success) {
           alert('สมัครสมาชิกสำเร็จและเข้าสู่ระบบเรียบร้อยแล้วค่ะ! 🎉');
-          navigate('/products');
+          navigate('/');
         } else {
           setErrorMsg(result.error || 'การสมัครสมาชิกเกิดข้อผิดพลาด');
         }
@@ -88,7 +88,7 @@ export const LoginPage: React.FC = () => {
           if (result.role === 'admin') {
             navigate('/admin/dashboard');
           } else {
-            navigate('/products');
+            navigate('/');
           }
         } else {
           setErrorMsg(result.error || 'การเข้าสู่ระบบล้มเหลว');

@@ -1,14 +1,36 @@
 import { RouteObject } from 'react-router-dom';
 import { RoleGuard } from '../role/guards/RoleGuard';
 import { MainLayout } from '../shared/components/layout/MainLayout';
+import { HomePage } from '../modules/products/pages/HomePage';
 import { CatalogPage } from '../modules/products/pages/CatalogPage';
 import { ProductDetailPage } from '../modules/products/pages/ProductDetailPage';
 import { CartPage } from '../modules/cart/pages/CartPage';
 import { PromotionsPage } from '../modules/promotions/pages/PromotionsPage';
 import { OrdersPage } from '../modules/cart/pages/OrdersPage';
+import { OrderDetailPage } from '../modules/cart/pages/OrderDetailPage';
 import { ProfilePage } from '../modules/auth/pages/ProfilePage';
 
 export const userRoutes: RouteObject[] = [
+  {
+    path: '/',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <HomePage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/home',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <HomePage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
   {
     path: '/products',
     element: (
@@ -45,6 +67,16 @@ export const userRoutes: RouteObject[] = [
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
           <OrdersPage />
+        </MainLayout>
+      </RoleGuard>
+    ),
+  },
+  {
+    path: '/orders/:id',
+    element: (
+      <RoleGuard allowedRoles={['user']}>
+        <MainLayout>
+          <OrderDetailPage />
         </MainLayout>
       </RoleGuard>
     ),

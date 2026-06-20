@@ -7,6 +7,14 @@ export interface RoutePermission {
 
 export const ROUTE_PERMISSIONS: RoutePermission[] = [
   {
+    path: '/',
+    allowedRoles: ['user'], // User main page
+  },
+  {
+    path: '/home',
+    allowedRoles: ['user'], // User main page
+  },
+  {
     path: '/login',
     allowedRoles: ['guest', 'admin', 'user'],
   },
@@ -21,6 +29,10 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   {
     path: '/orders',
     allowedRoles: ['user'], // User order history
+  },
+  {
+    path: '/orders/:id',
+    allowedRoles: ['user'], // User order details
   },
   {
     path: '/admin/dashboard',
