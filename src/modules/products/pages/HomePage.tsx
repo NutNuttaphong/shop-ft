@@ -65,29 +65,15 @@ export const HomePage: React.FC = () => {
   
   // Slider State
   const [activeSlide, setActiveSlide] = useState(0);
-  const banners = [
-    {
-      title: 'ยินดีต้อนรับสู่ FRIST SHOP 🛒',
-      description: 'แหล่งรวมผักสด ผลไม้ออร์แกนิก ปลอดสารพิษ ส่งตรงจากสวนของเกษตรกรถึงหน้าบ้านคุณ เพื่อสุขภาพที่ดีขึ้นในทุกๆ วัน',
-      image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85',
-      cta: 'เริ่มช้อปเลย',
-      link: '/products'
-    },
-    {
-      title: 'ฉลองลูกค้าใหม่ รับส่วนลด 10% 🎫',
-      description: 'เพียงใช้โค้ด "FRISTNEW" ในการสั่งซื้อครั้งแรก ไม่มีขั้นต่ำ ยิ่งช้อปยิ่งคุ้มค่า ปลอดภัย ไว้ใจได้',
-      image: 'https://images.unsplash.com/photo-1500937386664-56d1590d333c?auto=format&fit=crop&w=1200&q=85',
-      cta: 'ดูโค้ดโปรโมชัน',
-      link: '/promotions'
-    },
-    {
-      title: 'จัดส่งฟรีทั่วไทย เมื่อซื้อครบ 500 บาท 🚚',
-      description: 'หมดห่วงเรื่องค่าส่งสินค้า เราควบคุมอุณหภูมิตลอดการขนส่งอย่างดี ผักและผลไม้สดใหม่ไร้ตำหนิ',
-      image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=85',
-      cta: 'ดูสินค้าทั้งหมด',
-      link: '/products'
-    }
-  ];
+  // Banners mapped dynamically to News list
+  const banners = newsList.map((news) => ({
+    title: news.title,
+    description: news.description,
+    image: news.image,
+    cta: news.ctaText,
+    action: news.action,
+    tag: news.tag
+  }));
 
   // Auto slide effect
   useEffect(() => {
@@ -221,67 +207,45 @@ export const HomePage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Hero Section (Carousel) */}
-      <section className="relative overflow-hidden rounded-3xl bg-slate-900 aspect-[21/9] sm:aspect-[16/7] md:aspect-[2.4/1] shadow-xl group">
-        <div className="absolute inset-0 transition-transform duration-1000 ease-out">
-          <img
-            src={banners[activeSlide].image}
-            alt={banners[activeSlide].title}
-            className="w-full h-full object-cover opacity-60 scale-100 transition-all duration-700 group-hover:scale-105"
-          />
-        </div>
-        
-        {/* Banner Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/60 to-transparent flex flex-col justify-center px-8 sm:px-16 md:px-24 text-white">
-          <div className="max-w-2xl space-y-4 animate-fade-in">
-            <div className="inline-flex items-center gap-2 bg-primary-600/35 border border-primary-500/50 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-primary-200">
-              <Sparkles className="w-3.5 h-3.5" /> แนะนำพิเศษ
-            </div>
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
-              {banners[activeSlide].title}
-            </h1>
-            <p className="text-slate-300 text-xs sm:text-base md:text-lg leading-relaxed max-w-xl font-medium">
-              {banners[activeSlide].description}
-            </p>
-            <div className="pt-2">
-              <button
-                onClick={() => navigate(banners[activeSlide].link)}
-                className="bg-primary-600 hover:bg-primary-700 text-white font-extrabold px-6 sm:px-8 py-3 rounded-2xl transition-all shadow-lg shadow-primary-600/30 flex items-center gap-2 text-xs sm:text-[15px]"
-              >
-                <span>{banners[activeSlide].cta}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Carousel controls */}
-        <button
-          onClick={() => setActiveSlide((prev) => (prev - 1 + banners.length) % banners.length)}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 sm:w-12 h-10 sm:h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <button
-          onClick={() => setActiveSlide((prev) => (prev + 1) % banners.length)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 sm:w-12 h-10 sm:h-12 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-        >
-          <ChevronRight className="w-6 h-6" />
-        </button>
-
-        {/* Dots indicators */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2.5">
-          {banners.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setActiveSlide(idx)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                activeSlide === idx ? 'w-8 bg-primary-500' : 'w-2 bg-white/40 hover:bg-white/60'
-              }`}
+      {/* 1. Hero Section (Carousel showing only images, non-clickable) */}
+      {banners.length > 0 && (
+        <section className="relative overflow-hidden rounded-3xl bg-slate-900 aspect-[21/9] sm:aspect-[16/7] md:aspect-[2.4/1] shadow-xl group">
+          <div className="absolute inset-0 transition-transform duration-1000 ease-out">
+            <img
+              src={banners[activeSlide].image}
+              alt={banners[activeSlide].title}
+              className="w-full h-full object-cover scale-100 transition-all duration-700"
             />
-          ))}
-        </div>
-      </section>
+          </div>
+
+          {/* Carousel controls */}
+          <button
+            onClick={() => setActiveSlide((prev) => (prev - 1 + banners.length) % banners.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 sm:w-12 h-10 sm:h-12 bg-white/15 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer opacity-0 group-hover:opacity-100 z-10"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setActiveSlide((prev) => (prev + 1) % banners.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 sm:w-12 h-10 sm:h-12 bg-white/15 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer opacity-0 group-hover:opacity-100 z-10"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          {/* Dots indicators */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2.5 z-10">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveSlide(idx)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  activeSlide === idx ? 'w-8 bg-primary-500' : 'w-2 bg-white/40 hover:bg-white/60'
+                }`}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2. Value Propositions Section */}
       <section className="grid grid-cols-1 lg:grid-cols-4 gap-4">
