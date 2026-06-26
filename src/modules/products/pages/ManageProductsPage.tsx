@@ -36,8 +36,8 @@ export const ManageProductsPage: React.FC = () => {
   
   const [formError, setFormError] = useState<string | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingVideo, setIsDraggingVideo] = useState(false);
 
@@ -73,7 +73,7 @@ export const ManageProductsPage: React.FC = () => {
       videoUrl: '',
       description: ''
     });
-    setImagePreview(null);
+    setUploadedImages([]);
     setVideoPreview(null);
     setFormError(null);
     setModalOpen(true);
@@ -90,7 +90,10 @@ export const ManageProductsPage: React.FC = () => {
       videoUrl: product.videoUrl || '',
       description: product.description
     });
-    setImagePreview(product.imageUrl || null);
+    const urls = product.rawImageUrl 
+      ? product.rawImageUrl.split('|') 
+      : (product.imageUrl ? product.imageUrl.split('|') : []);
+    setUploadedImages(urls);
     setVideoPreview(product.videoUrl ? (product.videoUrl.startsWith('data:') ? base64ToBlobUrl(product.videoUrl) : product.videoUrl) : null);
     setFormError(null);
     setModalOpen(true);
@@ -116,24 +119,43 @@ export const ManageProductsPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setFormError('กรุณาเลือกไฟล์รูปภาพเท่านั้น (PNG, JPG, JPEG, WebP)');
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setFormError('ขนาดรูปภาพต้องไม่เกิน 2MB เพื่อความรวดเร็วในการโหลด');
-      return;
-    }
+  const handleFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(file => {
+      if (!file.type.startsWith('image/')) {
+        setFormError('กรุณาเลือกไฟล์รูปภาพเท่านั้น (PNG, JPG, JPEG, WebP)');
+        return false;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        setFormError('ขนาดรูปภาพแต่ละรูปต้องไม่เกิน 2MB เพื่อความรวดเร็วในการโหลด');
+        return false;
+      }
+      return true;
+    });
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64String = reader.result as string;
-      setFormData(prev => ({ ...prev, imageUrl: base64String }));
-      setImagePreview(base64String);
-      setFormError(null);
-    };
-    reader.readAsDataURL(file);
+    if (validFiles.length === 0) return;
+
+    let processedCount = 0;
+    const newBase64Images: string[] = [];
+
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = reader.result as string;
+        newBase64Images.push(base64String);
+        processedCount++;
+        
+        if (processedCount === validFiles.length) {
+          setUploadedImages(prev => {
+            const updated = [...prev, ...newBase64Images];
+            setFormData(f => ({ ...f, imageUrl: updated[0] || '' }));
+            return updated;
+          });
+          setFormError(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -149,22 +171,33 @@ export const ManageProductsPage: React.FC = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleFileChange(file);
+    if (e.dataTransfer.files) {
+      handleFiles(e.dataTransfer.files);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileChange(file);
+    if (e.target.files) {
+      handleFiles(e.target.files);
     }
   };
 
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, imageUrl: '' }));
-    setImagePreview(null);
+  const removeImage = (indexToRemove: number) => {
+    setUploadedImages(prev => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      setFormData(f => ({ ...f, imageUrl: updated[0] || '' }));
+      return updated;
+    });
+  };
+
+  const setAsPrimaryImage = (indexToMakePrimary: number) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev];
+      const [target] = newImages.splice(indexToMakePrimary, 1);
+      newImages.unshift(target);
+      setFormData(f => ({ ...f, imageUrl: newImages[0] || '' }));
+      return newImages;
+    });
   };
 
   const handleVideoFileChange = (file: File) => {
@@ -246,7 +279,7 @@ export const ManageProductsPage: React.FC = () => {
         price: Number(formData.price),
         stock: Number(formData.stock),
         category: formData.category,
-        imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+        imageUrl: uploadedImages.join('|') || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
         videoUrl: formData.videoUrl,
         description: formData.description
       };
@@ -532,33 +565,62 @@ export const ManageProductsPage: React.FC = () => {
 
               {/* Image Upload Zone */}
               <div>
-                <label className="block text-[16px] font-bold text-slate-700 mb-2">รูปภาพสินค้า *</label>
+                <label className="block text-[16px] font-bold text-slate-700 mb-2">รูปภาพสินค้า * ({uploadedImages.length} รูป)</label>
                 
-                {imagePreview ? (
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-slate-200 group aspect-video bg-slate-50 flex items-center justify-center">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="max-h-full max-w-full object-contain" 
-                    />
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                      <label className="cursor-pointer px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 font-bold rounded-xl text-sm transition-all shadow-md">
-                        เปลี่ยนรูปภาพ
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={handleFileInputChange} 
-                          className="hidden" 
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white font-bold rounded-xl text-sm transition-all shadow-md"
+                {uploadedImages.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Image Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {uploadedImages.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 flex flex-col items-center justify-center group shadow-xs">
+                          <img src={url} alt={`Product image ${idx + 1}`} className="w-full h-full object-cover" />
+                          
+                          {/* Delete button */}
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-2 right-2 p-1.5 bg-danger-600 hover:bg-danger-700 text-white rounded-full transition-all shadow-md z-20 cursor-pointer"
+                            title="ลบรูปภาพ"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Primary Badge or Set Cover Button */}
+                          {idx === 0 ? (
+                            <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-lg shadow-sm z-20">
+                              รูปหลัก
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setAsPrimaryImage(idx)}
+                              className="absolute bottom-2 left-2 right-2 py-1 bg-slate-900/80 hover:bg-primary-600/90 text-white text-[10px] font-bold rounded-lg transition-all opacity-0 group-hover:opacity-100 shadow-sm z-20 cursor-pointer"
+                            >
+                              ตั้งเป็นรูปหลัก
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* Small Add Image Card */}
+                      <div
+                        onClick={() => document.getElementById('product-image-file')?.click()}
+                        className="aspect-square border-2 border-dashed border-slate-300 hover:border-primary-400 hover:bg-slate-50/50 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all"
                       >
-                        ลบรูปภาพ
-                      </button>
+                        <Plus className="w-6 h-6 text-slate-400 mb-1" />
+                        <span className="text-[11px] font-bold text-slate-500">เพิ่มรูปภาพ</span>
+                      </div>
                     </div>
+                    
+                    {/* Hidden File Input for adding more images */}
+                    <input
+                      id="product-image-file"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
                   </div>
                 ) : (
                   <div
@@ -576,6 +638,7 @@ export const ManageProductsPage: React.FC = () => {
                       id="product-image-file"
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleFileInputChange}
                       className="hidden"
                     />
@@ -584,7 +647,7 @@ export const ManageProductsPage: React.FC = () => {
                       ลากไฟล์รูปภาพมาวางที่นี่ หรือ <span className="text-primary-600 hover:underline">คลิกเพื่อเลือกไฟล์</span>
                     </span>
                     <span className="text-[13px] text-slate-400 mt-1.5">
-                      รองรับไฟล์ PNG, JPG, JPEG, WebP (ขนาดไม่เกิน 2MB)
+                      รองรับไฟล์ PNG, JPG, JPEG, WebP (เลือกอัพโหลดได้หลายรูปพร้อมกัน, ขนาดรูปละไม่เกิน 2MB)
                     </span>
                   </div>
                 )}

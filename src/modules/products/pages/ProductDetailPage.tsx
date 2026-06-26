@@ -100,7 +100,7 @@ export const ProductDetailPage: React.FC = () => {
         setDetailQuantity(1);
 
         // Load media
-        const media = getProductMedia(prod.id, prod.imageUrl, prod.category, prod.videoUrl);
+        const media = getProductMedia(prod.id, prod.imageUrl, prod.category, prod.videoUrl, prod.imageUrls);
         setModalMedia(media);
         setActiveMediaIndex(0);
 

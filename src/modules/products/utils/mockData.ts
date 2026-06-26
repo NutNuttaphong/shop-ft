@@ -173,12 +173,20 @@ export const base64ToBlobUrl = (base64Data: string): string => {
   }
 };
 
-// 3. Media Gallery (Images & Videos) Generator based on Category/ID
-export const getProductMedia = (_productId: string, primaryImageUrl: string, category: string, videoUrl?: string): ProductMedia[] => {
+export const getProductMedia = (_productId: string, primaryImageUrl: string, category: string, videoUrl?: string, imageUrls?: string[]): ProductMedia[] => {
   const mediaList: ProductMedia[] = [];
   
-  // 1. Primary image (always first)
-  mediaList.push({ type: 'image', url: primaryImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80' });
+  // 1. Add images
+  if (imageUrls && imageUrls.length > 0) {
+    imageUrls.forEach(url => {
+      if (url) {
+        mediaList.push({ type: 'image', url });
+      }
+    });
+  } else {
+    // Primary image (always first)
+    mediaList.push({ type: 'image', url: primaryImageUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80' });
+  }
   
   // 2. If a custom video is uploaded, show it
   if (videoUrl) {
@@ -186,18 +194,19 @@ export const getProductMedia = (_productId: string, primaryImageUrl: string, cat
     mediaList.push({ type: 'video', url: finalVideoUrl });
   }
 
-  const normCategory = category ? category.trim() : 'ทั่วไป';
-  
-  // 3. Extra images based on category
-  if (normCategory.includes('อิเล็กทรอนิกส์')) {
-    mediaList.push(
-      { type: 'image', url: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=800&q=80' },
-      { type: 'image', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80' }
-    );
-    if (!videoUrl) {
-      mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-operating-a-smartphone-40539-large.mp4' });
-    }
-  } else if (normCategory.includes('เสื้อผ้า') || normCategory.includes('แฟชั่น')) {
+  // 3. Extra images based on category (only if no custom multiple images uploaded)
+  if (!imageUrls || imageUrls.length <= 1) {
+    const normCategory = category ? category.trim() : 'ทั่วไป';
+    
+    if (normCategory.includes('อิเล็กทรอนิกส์')) {
+      mediaList.push(
+        { type: 'image', url: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=800&q=80' },
+        { type: 'image', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80' }
+      );
+      if (!videoUrl) {
+        mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-holding-and-operating-a-smartphone-40539-large.mp4' });
+      }
+    } else if (normCategory.includes('เสื้อผ้า') || normCategory.includes('แฟชั่น')) {
     mediaList.push(
       { type: 'image', url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=80' },
       { type: 'image', url: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=800&q=80' }
@@ -237,6 +246,7 @@ export const getProductMedia = (_productId: string, primaryImageUrl: string, cat
     if (!videoUrl) {
       mediaList.push({ type: 'video', url: 'https://assets.mixkit.co/videos/preview/mixkit-delivery-guy-handing-over-packages-40763-large.mp4' });
     }
+  }
   }
   
   return mediaList;

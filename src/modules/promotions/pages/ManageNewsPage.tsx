@@ -19,36 +19,36 @@ const DEFAULT_NEWS: NewsItem[] = [
     id: 1,
     tag: 'โปรโมชันพิเศษ',
     title: 'ฉลองเปิดตัวระบบ FRIST SHOP 🛒',
-    description: 'รับส่วนลดพิเศษทันที 10% สำหรับสมาชิกใหม่ทุกคน เพียงใช้คูปองส่วนลดที่กำหนดหน้าชำระเงิน ช้อปสินค้าสุขภาพดีวันนี้เลย!',
-    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=85',
-    ctaText: 'ช้อปผักสดวันนี้',
-    action: 'vegetables'
+    description: 'รับส่วนลดพิเศษทันที 10% สำหรับสมาชิกใหม่ทุกคน เพียงใช้คูปองส่วนลดที่กำหนดหน้าชำระเงิน ช้อปสินค้าแบรนด์ดังวันนี้เลย!',
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'เริ่มช้อปปิ้งเลย',
+    action: 'shopping'
   },
   {
     id: 2,
     tag: 'ข่าวประชาสัมพันธ์',
-    title: 'ส่งตรงความสดใหม่จากสวนออร์แกนิก 🥬',
-    description: 'ผักสวนครัวและผลไม้ทุกประเภท ปลูกด้วยวิถีธรรมชาติ ปลอดสารพิษ 100% ปลอดภัยต่อสุขภาพตัวคุณและครอบครัวที่คุณรัก',
-    image: 'https://images.unsplash.com/photo-1500937386664-56d1590d333c?auto=format&fit=crop&w=1200&q=85',
-    ctaText: 'ดูสินค้าออร์แกนิก',
-    action: 'vegetables'
+    title: 'สินค้าไอทีและอิเล็กทรอนิกส์รุ่นใหม่ ⚡',
+    description: 'พบกับสมาร์ทโฟน แล็ปท็อป และอุปกรณ์เสริมเทคโนโลยีล่าสุด พร้อมการรับประกันศูนย์แท้และส่วนลดสุดพิเศษจากแบรนด์ดัง',
+    image: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'ดูสินค้าไอที',
+    action: 'electronics'
   },
   {
     id: 3,
     tag: 'ข่าวประชาสัมพันธ์',
     title: 'บริการจัดส่งฟรีทั่วพื้นที่ชุมชน 🚚',
-    description: 'เมื่อซื้อครบ 500 บาทขึ้นไป จัดส่งรวดเร็วทันใจในวันเดียว คงความสดใหม่ของอาหารเสมือนมาเลือกซื้อที่หน้าร้านด้วยตัวเอง',
+    description: 'เมื่อซื้อสินค้าภายในร้านครบ 500 บาทขึ้นไป จัดส่งรวดเร็วทันใจในวันเดียว คงคุณภาพและแพ็คของอย่างดีที่สุดถึงหน้าบ้านคุณ',
     image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=85',
-    ctaText: 'ดูเงื่อนไขส่งฟรี',
+    ctaText: 'ดูรายละเอียดส่งฟรี',
     action: 'free-delivery'
   },
   {
     id: 4,
     tag: 'เคล็ดลับสุขภาพ',
-    title: 'วิธีเลือกผักและผลไม้สดที่ถูกต้อง 🍎',
-    description: 'เรียนรู้ทริคเล็กๆ ในการสังเกตความสดใหม่และการล้างทำความสะอาดสารเคมีตกค้างอย่างถูกวิธี เพื่อโภชนาการที่ดีที่สุดในทุกมื้ออาหาร',
-    image: 'https://images.unsplash.com/photo-1610970881699-44a5587caa9a?auto=format&fit=crop&w=1200&q=85',
-    ctaText: 'อ่านเคล็ดลับสุขภาพ',
+    title: 'เคล็ดลับการดูแลรักษาอุปกรณ์ไอที 💻',
+    description: 'เรียนรู้วิธีการทำความสะอาด ยืดอายุการใช้งานแบตเตอรี่ และป้องกันเครื่องร้อนขณะใช้งาน เพื่อประสิทธิภาพสูงสุดและคุ้มค่าที่สุด',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85',
+    ctaText: 'อ่านเคล็ดลับไอที',
     action: 'health-tips'
   }
 ];
@@ -117,7 +117,7 @@ export const ManageNewsPage: React.FC = () => {
   // Load news from localStorage or set defaults
   useEffect(() => {
     const stored = localStorage.getItem('app_news_items');
-    if (stored) {
+    if (stored && !stored.includes('ผัก') && !stored.includes('ออร์แกนิก')) {
       try {
         setNewsList(JSON.parse(stored));
       } catch {

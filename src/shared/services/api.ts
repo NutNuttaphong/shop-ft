@@ -22,6 +22,8 @@ export interface Product {
   description: string;
   category: string;
   imageUrl: string;
+  imageUrls?: string[];
+  rawImageUrl?: string;
   videoUrl?: string;
   stock: number;
   createdAt?: string;
@@ -125,6 +127,54 @@ class RestClient {
     this.baseUrl = baseUrl;
   }
 
+  private normalizeResponseData<T>(path: string, data: any): T {
+    if (!data) return data;
+
+    const normalizeImageField = (obj: any) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (typeof obj.imageUrl === 'string' && obj.imageUrl.includes('|')) {
+        const rawImageUrl = obj.imageUrl;
+        const imageUrls = rawImageUrl.split('|');
+        obj.imageUrl = imageUrls[0] || '';
+        obj.imageUrls = imageUrls;
+        obj.rawImageUrl = rawImageUrl;
+      } else if (typeof obj.imageUrl === 'string') {
+        obj.imageUrls = obj.imageUrl ? [obj.imageUrl] : [];
+        obj.rawImageUrl = obj.imageUrl;
+      }
+      return obj;
+    };
+
+    const deepNormalize = (val: any): any => {
+      if (!val) return val;
+      if (Array.isArray(val)) {
+        return val.map(deepNormalize);
+      }
+      if (typeof val === 'object') {
+        normalizeImageField(val);
+        for (const key in val) {
+          if (Object.prototype.hasOwnProperty.call(val, key)) {
+            if (Array.isArray(val[key]) || typeof val[key] === 'object') {
+              val[key] = deepNormalize(val[key]);
+            }
+          }
+        }
+      }
+      return val;
+    };
+
+    let processed = data;
+    if (path.includes('/api/promotions')) {
+      if (Array.isArray(processed)) {
+        processed = (processed as unknown as RawPromotion[]).map(normalizePromotion) as unknown as T;
+      } else if (processed && typeof processed === 'object') {
+        processed = normalizePromotion(processed as unknown as RawPromotion) as unknown as T;
+      }
+    }
+
+    return deepNormalize(processed) as T;
+  }
+
   /**
    * HTTP GET Request
    */
@@ -145,16 +195,7 @@ class RestClient {
         };
       }
 
-      // Normalize promotion data
-      let data = json.data;
-      if (path.includes('/api/promotions')) {
-        if (Array.isArray(data)) {
-          data = (data as unknown as RawPromotion[]).map(normalizePromotion) as unknown as T;
-        } else if (data && typeof data === 'object') {
-          data = normalizePromotion(data as unknown as RawPromotion) as unknown as T;
-        }
-      }
-
+      const data = this.normalizeResponseData<T>(path, json.data);
       return { data, error: null, status: response.status };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
@@ -187,7 +228,8 @@ class RestClient {
         };
       }
 
-      return { data: json.data, error: null, status: response.status };
+      const data = this.normalizeResponseData<T>(path, json.data);
+      return { data, error: null, status: response.status };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
       return {
@@ -219,7 +261,8 @@ class RestClient {
         };
       }
 
-      return { data: json.data, error: null, status: response.status };
+      const data = this.normalizeResponseData<T>(path, json.data);
+      return { data, error: null, status: response.status };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
       return {
