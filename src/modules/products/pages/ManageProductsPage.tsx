@@ -51,7 +51,7 @@ export const ManageProductsPage: React.FC = () => {
       } else {
         setProducts(response.data || []);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลสินค้าได้');
     } finally {
       setLoading(false);
@@ -299,7 +299,7 @@ export const ManageProductsPage: React.FC = () => {
         setModalOpen(false);
         fetchProducts(); // Refresh list
       }
-    } catch (err) {
+    } catch {
       setFormError('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setFormSubmitting(false);

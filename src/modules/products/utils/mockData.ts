@@ -16,6 +16,10 @@ export interface Review {
   helpfulCount: number;
 }
 
+export interface SavedReview extends Review {
+  productId: string;
+}
+
 export interface ProductMedia {
   type: 'image' | 'video';
   url: string;
@@ -324,7 +328,7 @@ export const getProductReviews = (productId: string, category: string): Review[]
     const list = localStorage.getItem(USER_REVIEWS_KEY);
     if (!list) return baseReviews;
     
-    const userReviews: any[] = JSON.parse(list);
+    const userReviews: SavedReview[] = JSON.parse(list);
     const productUserReviews = userReviews
       .filter(r => r.productId === productId)
       .map(r => ({
@@ -356,7 +360,7 @@ export const submitProductReview = (productId: string, rating: number, comment: 
   
   try {
     const list = localStorage.getItem(USER_REVIEWS_KEY);
-    const userReviews: any[] = list ? JSON.parse(list) : [];
+    const userReviews: SavedReview[] = list ? JSON.parse(list) : [];
     userReviews.push(newReview);
     localStorage.setItem(USER_REVIEWS_KEY, JSON.stringify(userReviews));
   } catch (e) {

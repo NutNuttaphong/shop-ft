@@ -104,7 +104,7 @@ export const ManagePromotionsPage: React.FC = () => {
       } else {
         setPromotions(response.data || []);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลโปรโมชั่นได้');
     } finally {
       setLoading(false);
@@ -310,7 +310,7 @@ export const ManagePromotionsPage: React.FC = () => {
         setModalOpen(false);
         fetchPromotions(); // Refresh list
       }
-    } catch (err) {
+    } catch {
       setFormError('ไม่สามารถบันทึกข้อมูลโปรโมชั่นได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setFormSubmitting(false);

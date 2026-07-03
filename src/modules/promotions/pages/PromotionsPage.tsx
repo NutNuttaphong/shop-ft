@@ -29,7 +29,7 @@ export const PromotionsPage: React.FC = () => {
         const activePromos = allPromos.filter(p => p.isActive);
         setPromotions(activePromos);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลโปรโมชั่นได้');
     } finally {
       setLoading(false);
@@ -120,18 +120,20 @@ export const PromotionsPage: React.FC = () => {
   // Helper to get promotion summary description
   const getPromoSummary = (promo: Promotion) => {
     switch (promo.type) {
-      case 'FLASH_SALE':
+      case 'FLASH_SALE': {
         const flashProds = promo.productIds
           ? allProducts.filter(p => promo.productIds?.includes(p.id))
           : [];
         const prodNames = flashProds.map(p => p.name).join(', ');
         return `ลดราคาพิเศษสำหรับสินค้าที่ร่วมรายการ: ${prodNames || 'สินค้าที่เลือก'} (หักส่วนลดทันทีในตะกร้า)`;
-      case 'BUNDLE_DEAL':
+      }
+      case 'BUNDLE_DEAL': {
         const bundleProds = promo.productIds
           ? allProducts.filter(p => promo.productIds?.includes(p.id))
           : [];
         const bNames = bundleProds.map(p => p.name).join(', ');
         return `ซื้อสินค้าที่ร่วมรายการตั้งแต่ ${promo.bundleQty} ชิ้นขึ้นไป ลดราคาทันที: ${bNames || 'สินค้าที่เลือก'}`;
+      }
       case 'DISCOUNT_CAMPAIGN':
         return `ลดราคาพิเศษยกหมวดหมู่สำหรับสินค้าในกลุ่ม "${promo.targetCategory}" ทั้งหมด (หักส่วนลดอัตโนมัติ)`;
       case 'COUPON':

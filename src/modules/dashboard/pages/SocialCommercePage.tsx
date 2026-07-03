@@ -1,5 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { restfulApi, Product, Promotion } from '../../../shared/services/api';
+
+interface ChatMessage {
+  id: string;
+  sender: string;
+  receiver: string;
+  message: string;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'video' | null;
+  createdAt?: string;
+  timestamp?: string;
+  isRead?: boolean;
+}
 import { 
   Send, 
   MessageSquare, 
@@ -80,7 +92,7 @@ export const SocialCommercePage: React.FC = () => {
   // 1. Chat States
   const [contacts, setContacts] = useState<string[]>([]);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [unreadContacts, setUnreadContacts] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -162,8 +174,42 @@ export const SocialCommercePage: React.FC = () => {
   const [newFeedImageUrl] = useState('https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=600&q=80');
   const [newFeedProductId, setNewFeedProductId] = useState('');
 
+  const fetchLiveStreams = useCallback(async () => {
+    try {
+      const res = await restfulApi.get<LiveStream[]>('/api/social/live');
+      if (res.data) {
+        setStreams(res.data);
+        const streaming = res.data.find(s => s.status === 'STREAMING');
+        if (streaming) {
+          setActiveStream(streaming);
+          setLiveHeartCount(streaming.likeCount);
+        }
+      }
+    } catch {
+      // Ignore errors when fetching live streams
+    }
+  }, []);
+
+  const fetchVideos = useCallback(async () => {
+    try {
+      const res = await restfulApi.get<ShopeeVideo[]>('/api/social/videos');
+      if (res.data) setVideos(res.data);
+    } catch {
+      // Ignore errors when fetching videos
+    }
+  }, []);
+
+  const fetchFeeds = useCallback(async () => {
+    try {
+      const res = await restfulApi.get<FeedPost[]>('/api/social/feed');
+      if (res.data) setFeeds(res.data);
+    } catch {
+      // Ignore errors when fetching feeds
+    }
+  }, []);
+
   // Fetch Base Data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const prodRes = await restfulApi.get<Product[]>('/api/products');
       if (prodRes.data) setProducts(prodRes.data);
@@ -178,65 +224,31 @@ export const SocialCommercePage: React.FC = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [fetchVideos, fetchFeeds, fetchLiveStreams]);
 
-  const fetchLiveStreams = async () => {
-    try {
-      const res = await restfulApi.get<LiveStream[]>('/api/social/live');
-      if (res.data) {
-        setStreams(res.data);
-        const streaming = res.data.find(s => s.status === 'STREAMING');
-        if (streaming) {
-          setActiveStream(streaming);
-          setLiveHeartCount(streaming.likeCount);
-        }
-      }
-    } catch {
-      // Ignore errors when fetching live streams
-    }
-  };
-
-  const fetchVideos = async () => {
-    try {
-      const res = await restfulApi.get<ShopeeVideo[]>('/api/social/videos');
-      if (res.data) setVideos(res.data);
-    } catch {
-      // Ignore errors when fetching videos
-    }
-  };
-
-  const fetchFeeds = async () => {
-    try {
-      const res = await restfulApi.get<FeedPost[]>('/api/social/feed');
-      if (res.data) setFeeds(res.data);
-    } catch {
-      // Ignore errors when fetching feeds
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    fetchContacts();
-  }, []);
-
-  // --- 1. CHAT LOGIC ---
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       const res = await restfulApi.get<string[]>('/api/chat/contacts');
       if (res.data) setContacts(res.data);
     } catch {
       // Ignore errors when fetching contacts
     }
-  };
+  }, []);
 
-  const fetchChatHistory = async (contact: string) => {
+  useEffect(() => {
+    fetchData();
+    fetchContacts();
+  }, [fetchData, fetchContacts]);
+
+  // --- 1. CHAT LOGIC ---
+  const fetchChatHistory = useCallback(async (contact: string) => {
     try {
-      const res = await restfulApi.get<any[]>(`/api/chat/history?contact=${contact}`);
+      const res = await restfulApi.get<ChatMessage[]>(`/api/chat/history?contact=${contact}`);
       if (res.data) setChatMessages(res.data);
     } catch {
       // Ignore errors when fetching chat history
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (selectedContact) {
@@ -247,7 +259,7 @@ export const SocialCommercePage: React.FC = () => {
         return next;
       });
     }
-  }, [selectedContact]);
+  }, [selectedContact, fetchChatHistory]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -276,7 +288,7 @@ export const SocialCommercePage: React.FC = () => {
     return () => {
       window.removeEventListener('chat-message-received', handleIncomingMessage);
     };
-  }, [selectedContact]);
+  }, [selectedContact, fetchContacts]);
 
   const handleSendChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,14 +301,15 @@ export const SocialCommercePage: React.FC = () => {
     removeSelectedFileSC();
 
     try {
-      const res = await restfulApi.post<any>('/api/chat/send', {
+      const res = await restfulApi.post<ChatMessage>('/api/chat/send', {
         receiver: selectedContact,
         message: text,
         mediaUrl: mediaUrlToSend,
         mediaType: mediaTypeToSend
       });
-      if (res.data) {
-        setChatMessages(prev => [...prev, res.data]);
+      const newMsg = res.data;
+      if (newMsg) {
+        setChatMessages(prev => [...prev, newMsg]);
       }
     } catch {
       // Ignore errors when sending chat message
@@ -307,7 +320,7 @@ export const SocialCommercePage: React.FC = () => {
 
   // Live streaming simulator ticker (viewer comments & viewers count)
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (activeStream) {
       interval = setInterval(async () => {
         // 1. Generate visitor comments
@@ -495,7 +508,7 @@ export const SocialCommercePage: React.FC = () => {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'chat' | 'live' | 'video' | 'followers' | 'feed')}
               className={`flex items-center gap-2 px-5 py-3.5 border-b-2 font-bold text-sm transition-all whitespace-nowrap ${
                 isActive 
                   ? 'border-pink-600 text-pink-600' 
@@ -584,7 +597,7 @@ export const SocialCommercePage: React.FC = () => {
                                     src={msg.mediaUrl}
                                     alt="Uploaded Media"
                                     className="rounded-xl w-full object-cover max-h-56 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
-                                    onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                    onClick={() => window.open(msg.mediaUrl || undefined, '_blank')}
                                   />
                                 ) : msg.mediaType === 'video' ? (
                                   <video

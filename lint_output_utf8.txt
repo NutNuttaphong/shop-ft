@@ -1,0 +1,105 @@
+
+> project-fs@0.0.0 lint
+> eslint .
+
+
+D:\project\project-FS\src\modules\auth\pages\LoginPage.tsx
+  73:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  96:16  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\modules\auth\store\authContext.tsx
+   16:14  warning  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file  react-refresh/only-export-components
+   28:16  error    'e' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   69:14  error    'err' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   69:19  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  125:14  error    'err' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  125:19  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\cart\pages\CartPage.tsx
+  144:6   warning  React Hook useEffect has a missing dependency: 'loadCart'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  252:22  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  272:41  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  286:39  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+  344:14  error    'err' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  446:40  error    Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\cart\pages\OrderDetailPage.tsx
+   43:40  error    Unexpected any. Specify a different type                                                                              @typescript-eslint/no-explicit-any
+   79:44  error    Unexpected any. Specify a different type                                                                              @typescript-eslint/no-explicit-any
+  112:14  error    'err' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+  121:6   warning  React Hook useEffect has a missing dependency: 'fetchOrderDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  179:14  error    'err' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+  201:14  error    'err' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+  222:14  error    'err' is defined but never used                                                                                       @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\modules\cart\pages\OrdersPage.tsx
+   23:40  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   25:67  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   49:43  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+   97:6   warning  React Hook useEffect has a missing dependency: 'fetchMyOrders'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  241:69  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\dashboard\pages\AnalyticsPage.tsx
+  62:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\modules\dashboard\pages\DashboardPage.tsx
+   19:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   25:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   77:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   89:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  109:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  170:14  error  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  182:14  error  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  194:14  error  'e' is defined but never used             @typescript-eslint/no-unused-vars
+  213:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  410:76  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  874:61  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\dashboard\pages\SocialCommercePage.tsx
+   83:52  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  220:6   warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  234:40  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  292:41  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  310:19  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+  498:53  error    Unexpected any. Specify a different type                                                                      @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\products\pages\ManageProductsPage.tsx
+   54:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  302:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\modules\products\utils\mockData.ts
+  327:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\modules\promotions\pages\ManagePromotionsPage.tsx
+  107:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+  313:14  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\modules\promotions\pages\PromotionsPage.tsx
+   32:14  error  'err' is defined but never used               @typescript-eslint/no-unused-vars
+  124:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  127:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  130:9   error  Unexpected lexical declaration in case block  no-case-declarations
+  133:9   error  Unexpected lexical declaration in case block  no-case-declarations
+
+D:\project\project-FS\src\shared\components\layout\ChatWidget.tsx
+   90:14  error  'err' is defined but never used                                                                                                                                                              @typescript-eslint/no-unused-vars
+   98:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  105:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  112:3   error  React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+  156:14  error  'err' is defined but never used                                                                                                                                                              @typescript-eslint/no-unused-vars
+
+D:\project\project-FS\src\shared\components\layout\MainLayout.tsx
+  94:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\project\project-FS\src\shared\components\layout\NotificationContext.tsx
+  26:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\project\project-FS\src\shared\services\api.ts
+  130:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  133:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 66 problems (60 errors, 6 warnings)
+

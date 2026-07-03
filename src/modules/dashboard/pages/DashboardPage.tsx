@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Product, restfulApi } from '../../../shared/services/api';
+import { Product, restfulApi, RawOrder } from '../../../shared/services/api';
+
+interface ChatMessage {
+  id: string;
+  sender: string;
+  receiver: string;
+  message: string;
+  mediaUrl?: string | null;
+  mediaType?: 'image' | 'video' | null;
+  createdAt?: string;
+  timestamp?: string;
+  isRead?: boolean;
+}
 import { 
   TrendingUp, 
   Package, 
@@ -16,13 +28,13 @@ import {
 export const DashboardPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<RawOrder[]>([]);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
 
   // Chat Hub States
   const [contacts, setContacts] = useState<string[]>([]);
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [unreadContacts, setUnreadContacts] = useState<Set<string>>(new Set());
 
@@ -74,7 +86,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   // Shipping Label States
-  const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<any | null>(null);
+  const [selectedOrderForLabel, setSelectedOrderForLabel] = useState<RawOrder | null>(null);
   const [showLabelModal, setShowLabelModal] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,7 +98,7 @@ export const DashboardPage: React.FC = () => {
       setProducts(list);
       setLowStockCount(list.filter(p => p.stock <= 5).length);
 
-      const orderRes = await restfulApi.get<any[]>('/api/orders');
+      const orderRes = await restfulApi.get<RawOrder[]>('/api/orders');
       setOrders(orderRes.data || []);
     } catch (e) {
       console.error('Failed to fetch admin stats and orders', e);
@@ -106,7 +118,7 @@ export const DashboardPage: React.FC = () => {
 
   const fetchChatHistory = async (contact: string) => {
     try {
-      const res = await restfulApi.get<any[]>(`/api/chat/history?contact=${contact}`);
+      const res = await restfulApi.get<ChatMessage[]>(`/api/chat/history?contact=${contact}`);
       if (res.data) {
         setChatMessages(res.data);
       }
@@ -167,7 +179,7 @@ export const DashboardPage: React.FC = () => {
     try {
       await restfulApi.put(`/api/orders/${orderId}/status?status=${newStatus}`, {});
       await fetchStatsAndOrders();
-    } catch (e) {
+    } catch {
       alert('ไม่สามารถอัปเดตสถานะคำสั่งซื้อได้ค่ะ');
     } finally {
       setIsUpdatingStatus(null);
@@ -179,7 +191,7 @@ export const DashboardPage: React.FC = () => {
     try {
       await restfulApi.put(`/api/orders/${orderId}/resolve-return?approve=${approve}`, {});
       await fetchStatsAndOrders();
-    } catch (e) {
+    } catch {
       alert('ไม่สามารถดำเนินการจัดการคำขอคืนเงินได้ค่ะ');
     } finally {
       setIsUpdatingStatus(null);
@@ -191,7 +203,7 @@ export const DashboardPage: React.FC = () => {
     try {
       await restfulApi.put(`/api/orders/${orderId}/resolve-dispute`, {});
       await fetchStatsAndOrders();
-    } catch (e) {
+    } catch {
       alert('ไม่สามารถปิดข้อพิพาทได้ค่ะ');
     } finally {
       setIsUpdatingStatus(null);
@@ -210,14 +222,15 @@ export const DashboardPage: React.FC = () => {
     removeSelectedFile();
 
     try {
-      const res = await restfulApi.post<any>('/api/chat/send', {
+      const res = await restfulApi.post<ChatMessage>('/api/chat/send', {
         receiver: selectedContact,
         message: msgText,
         mediaUrl: mediaUrlToSend,
         mediaType: mediaTypeToSend
       });
-      if (res.data) {
-        setChatMessages(prev => [...prev, res.data]);
+      const newMsg = res.data;
+      if (newMsg) {
+        setChatMessages(prev => [...prev, newMsg]);
       }
     } catch (e) {
       console.error('Failed to send admin message', e);
@@ -407,7 +420,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="text-xs text-slate-400 font-semibold space-y-0.5">
                       <p>ลูกค้า: <span className="text-slate-700 font-bold">{order.customer.name}</span> ({order.customer.phone})</p>
                       <p>เวลา: {formatDate(order.createdAt)}</p>
-                      <p className="truncate">สินค้า: {order.items.map((i: any) => `${i.name} x${i.quantity}`).join(', ')}</p>
+                      <p className="truncate">สินค้า: {order.items.map((i) => `${i.name} x${i.quantity}`).join(', ')}</p>
                       {order.carrier && <p>ขนส่ง: {order.carrier} ({order.trackingNumber})</p>}
                     </div>
 
@@ -651,7 +664,7 @@ export const DashboardPage: React.FC = () => {
                                   src={msg.mediaUrl}
                                   alt="Uploaded Media"
                                   className="rounded-xl w-full object-cover max-h-56 cursor-pointer hover:scale-[1.02] transition-transform duration-200"
-                                  onClick={() => window.open(msg.mediaUrl, '_blank')}
+                                  onClick={() => window.open(msg.mediaUrl || undefined, '_blank')}
                                 />
                               ) : msg.mediaType === 'video' ? (
                                 <video
@@ -871,7 +884,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="space-y-1.5 text-xs">
                   <span className="text-[10px] font-bold uppercase text-slate-500 block">รายการสินค้าที่ต้องบรรจุ (Packing List):</span>
                   <div className="space-y-1">
-                    {selectedOrderForLabel.items.map((item: any, idx: number) => (
+                    {selectedOrderForLabel.items.map((item, idx: number) => (
                       <div key={idx} className="flex justify-between items-center border-b border-slate-100 pb-1 last:border-0">
                         <span className="font-bold text-slate-800">
                           {idx + 1}. {item.name} {item.variant ? `(${item.variant})` : ''}

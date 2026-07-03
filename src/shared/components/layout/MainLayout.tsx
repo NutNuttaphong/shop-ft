@@ -25,6 +25,17 @@ import {
   Newspaper
 } from 'lucide-react';
 
+interface LocalCartItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+  stock: number;
+  category: string;
+  variant?: string;
+}
+
 interface MainLayoutProps {
   children: React.ReactNode;
 }
@@ -91,7 +102,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   // Sync cart count from backend or fallback to local storage
   const syncCartCount = async () => {
     try {
-      const res = await restfulApi.get<any[]>('/api/cart');
+      const res = await restfulApi.get<LocalCartItem[]>('/api/cart');
       if (res.data && Array.isArray(res.data)) {
         const count = res.data.reduce((sum, item) => sum + (item.quantity || 0), 0);
         setCartCount(count);

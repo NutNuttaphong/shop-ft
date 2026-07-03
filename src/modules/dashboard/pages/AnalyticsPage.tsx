@@ -59,7 +59,7 @@ export const AnalyticsPage: React.FC = () => {
       } else {
         setData(res.data);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์เพื่อดึงข้อมูลสถิติได้');
     } finally {
       setLoading(false);

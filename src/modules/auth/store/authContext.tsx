@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedSession) {
       try {
         setUser(JSON.parse(storedSession));
-      } catch (e) {
+      } catch {
         localStorage.removeItem('app_auth_session');
       }
     }
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('app_auth_session', JSON.stringify(session));
       setIsLoading(false);
       return { success: true, role: session.role as 'admin' | 'user' };
-    } catch (err: any) {
+    } catch {
       setIsLoading(false);
       return {
         success: false,
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('app_auth_session', JSON.stringify(session));
       setIsLoading(false);
       return { success: true };
-    } catch (err: any) {
+    } catch {
       setIsLoading(false);
       return {
         success: false,

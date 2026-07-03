@@ -70,7 +70,7 @@ export const LoginPage: React.FC = () => {
         } else {
           setErrorMsg(result.error || 'การสมัครสมาชิกเกิดข้อผิดพลาด');
         }
-      } catch (err) {
+      } catch {
         setErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
       } finally {
         setIsSubmitting(false);
@@ -93,7 +93,7 @@ export const LoginPage: React.FC = () => {
         } else {
           setErrorMsg(result.error || 'การเข้าสู่ระบบล้มเหลว');
         }
-      } catch (err) {
+      } catch {
         setErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
       } finally {
         setIsSubmitting(false);

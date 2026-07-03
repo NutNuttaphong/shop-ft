@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ShoppingBag, Trash2, Plus, Minus, CreditCard, ArrowLeft, 
@@ -18,6 +18,27 @@ interface CartItem {
   stock: number;
   category: string;
   variant?: string;
+}
+
+interface CheckoutResponse {
+  orderNo: string;
+  createdAt?: string;
+  items: {
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+    category: string;
+    variant?: string | null;
+  }[];
+  total: number;
+  customer?: {
+    taxInvoiceRequested?: boolean;
+    taxName?: string | null;
+    taxId?: string | null;
+    taxAddress?: string | null;
+  };
 }
 
 export const CartPage: React.FC = () => {
@@ -113,7 +134,7 @@ export const CartPage: React.FC = () => {
   }, [user]);
 
   // Load Cart or Buy Now item
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     if (isBuyNow) {
       try {
         const itemStr = localStorage.getItem('app_buynow_item');
@@ -137,11 +158,11 @@ export const CartPage: React.FC = () => {
         setCartItems([]);
       }
     }
-  };
+  }, [isBuyNow]);
 
   useEffect(() => {
     loadCart();
-  }, [isBuyNow]);
+  }, [loadCart]);
 
   // Auto print receipt
   useEffect(() => {
@@ -249,7 +270,22 @@ export const CartPage: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      const payload: any = {
+      const payload: {
+        customerName: string;
+        customerPhone: string;
+        customerAddress: string;
+        paymentMethod: 'COD' | 'QR';
+        slipUploaded: boolean;
+        slipName: string | null;
+        promoCode: string | null;
+        discount: number;
+        coinsUsed: number;
+        taxInvoiceRequested: boolean;
+        taxName: string | null;
+        taxId: string | null;
+        taxAddress: string | null;
+        items?: CartItem[];
+      } = {
         customerName: customerName,
         customerPhone: customerPhone,
         customerAddress: customerAddress,
@@ -269,7 +305,7 @@ export const CartPage: React.FC = () => {
         payload.items = cartItems;
       }
 
-      const res = await restfulApi.post<any>('/api/orders/checkout', payload);
+      const res = await restfulApi.post<CheckoutResponse>('/api/orders/checkout', payload);
 
       if (res.error) {
         alert(`เกิดข้อผิดพลาด: ${res.error}`);
@@ -279,11 +315,17 @@ export const CartPage: React.FC = () => {
 
       const order = res.data;
 
+      if (!order) {
+        alert('ไม่พบข้อมูลการสั่งซื้อที่ตอบกลับมา');
+        setIsSubmitting(false);
+        return;
+      }
+
       // Save order details to localStorage for the receipt component (Bill.tsx)
       const orderData = {
         orderNo: order.orderNo,
         date: order.createdAt || new Date().toISOString(),
-        items: order.items.map((item: any) => ({
+        items: order.items.map((item) => ({
           id: item.productId,
           name: item.name,
           price: item.price,
@@ -341,7 +383,7 @@ export const CartPage: React.FC = () => {
       setIsSubmitting(false);
       setCheckoutSuccess(true);
       setShowQrModal(false);
-    } catch (err) {
+    } catch {
       alert('เกิดข้อผิดพลาดในการสั่งซื้อ กรุณาลองใหม่อีกครั้ง');
       setIsSubmitting(false);
     }
@@ -443,13 +485,17 @@ export const CartPage: React.FC = () => {
     }
 
     try {
-      const res = await restfulApi.get<any>(`/api/promotions/validate/${code}`);
+      const res = await restfulApi.get<Promotion>(`/api/promotions/validate/${code}`);
       if (res.error) {
         setCouponError(res.error);
         return;
       }
 
       const promo = res.data;
+      if (!promo) {
+        setCouponError('ไม่พบข้อมูลคูปอง');
+        return;
+      }
       if (grandTotal < promo.minPurchase) {
         setCouponError(`ยอดสั่งซื้อขั้นต่ำต้องครบ ${promo.minPurchase} บาท ถึงจะใช้คูปองนี้ได้ค่ะ (ปัจจุบันมี ${grandTotal} บาท)`);
         return;

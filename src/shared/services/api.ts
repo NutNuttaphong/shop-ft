@@ -106,6 +106,41 @@ interface RawPromotion {
   targetCategory?: string;
 }
 
+export interface RawOrder {
+  id: string;
+  orderNo: string;
+  createdAt: string;
+  items: {
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    imageUrl: string;
+    category: string;
+    variant?: string | null;
+  }[];
+  total: number;
+  discount: number;
+  coinsUsed: number;
+  promoCode?: string | null;
+  customer: {
+    name: string;
+    phone: string;
+    address: string;
+  };
+  paymentMethod: string;
+  slipUploaded?: boolean;
+  slipName?: string | null;
+  status: string;
+  trackingNumber?: string;
+  carrier?: string;
+  returnReason?: string;
+  returnDescription?: string;
+  disputeOpened?: boolean;
+  disputeReason?: string | null;
+  disputeStatus?: string;
+}
+
 /**
  * Normalize promotion data from backend (Java enums are UPPERCASE)
  */
@@ -127,35 +162,38 @@ class RestClient {
     this.baseUrl = baseUrl;
   }
 
-  private normalizeResponseData<T>(path: string, data: any): T {
-    if (!data) return data;
+  private normalizeResponseData<T>(path: string, data: unknown): T {
+    if (!data) return data as T;
 
-    const normalizeImageField = (obj: any) => {
+    const normalizeImageField = (obj: unknown) => {
       if (!obj || typeof obj !== 'object') return obj;
-      if (typeof obj.imageUrl === 'string' && obj.imageUrl.includes('|')) {
-        const rawImageUrl = obj.imageUrl;
+      const record = obj as Record<string, unknown>;
+      if (typeof record.imageUrl === 'string' && record.imageUrl.includes('|')) {
+        const rawImageUrl = record.imageUrl;
         const imageUrls = rawImageUrl.split('|');
-        obj.imageUrl = imageUrls[0] || '';
-        obj.imageUrls = imageUrls;
-        obj.rawImageUrl = rawImageUrl;
-      } else if (typeof obj.imageUrl === 'string') {
-        obj.imageUrls = obj.imageUrl ? [obj.imageUrl] : [];
-        obj.rawImageUrl = obj.imageUrl;
+        record.imageUrl = imageUrls[0] || '';
+        record.imageUrls = imageUrls;
+        record.rawImageUrl = rawImageUrl;
+      } else if (typeof record.imageUrl === 'string') {
+        record.imageUrls = record.imageUrl ? [record.imageUrl] : [];
+        record.rawImageUrl = record.imageUrl;
       }
       return obj;
     };
 
-    const deepNormalize = (val: any): any => {
+    const deepNormalize = (val: unknown): unknown => {
       if (!val) return val;
       if (Array.isArray(val)) {
-        return val.map(deepNormalize);
+        return (val as unknown[]).map(deepNormalize);
       }
       if (typeof val === 'object') {
         normalizeImageField(val);
-        for (const key in val) {
-          if (Object.prototype.hasOwnProperty.call(val, key)) {
-            if (Array.isArray(val[key]) || typeof val[key] === 'object') {
-              val[key] = deepNormalize(val[key]);
+        const record = val as Record<string, unknown>;
+        for (const key in record) {
+          if (Object.prototype.hasOwnProperty.call(record, key)) {
+            const childVal = record[key];
+            if (Array.isArray(childVal) || (childVal && typeof childVal === 'object')) {
+              record[key] = deepNormalize(childVal);
             }
           }
         }
@@ -163,12 +201,12 @@ class RestClient {
       return val;
     };
 
-    let processed = data;
+    let processed: unknown = data;
     if (path.includes('/api/promotions')) {
       if (Array.isArray(processed)) {
-        processed = (processed as unknown as RawPromotion[]).map(normalizePromotion) as unknown as T;
+        processed = (processed as RawPromotion[]).map(normalizePromotion);
       } else if (processed && typeof processed === 'object') {
-        processed = normalizePromotion(processed as unknown as RawPromotion) as unknown as T;
+        processed = normalizePromotion(processed as RawPromotion);
       }
     }
 

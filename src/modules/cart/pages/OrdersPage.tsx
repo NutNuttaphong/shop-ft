@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   History, Search, Calendar, CreditCard, Truck, ShoppingBag, 
   RotateCcw, Copy, Check, Eye, AlertCircle
 } from 'lucide-react';
 import { OrderData, OrderItem } from './Bill';
-import { restfulApi } from '../../../shared/services/api';
+import { restfulApi, RawOrder } from '../../../shared/services/api';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 export const OrdersPage: React.FC = () => {
@@ -18,11 +18,11 @@ export const OrdersPage: React.FC = () => {
   
   
 
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = useCallback(async () => {
     try {
-      const res = await restfulApi.get<any[]>('/api/orders/my');
+      const res = await restfulApi.get<RawOrder[]>('/api/orders/my');
       if (res.data) {
-        const formattedOrders: OrderData[] = res.data.map((order: any) => {
+        const formattedOrders: OrderData[] = res.data.map((order) => {
           // Process coin refund if applicable
           if (order.status === 'RETURN_REFUNDED' && order.coinsUsed > 0 && user) {
             const processedKey = `app_refunded_coins_processed_${user.username}`;
@@ -46,7 +46,7 @@ export const OrdersPage: React.FC = () => {
             id: order.id,
             orderNo: order.orderNo,
             date: order.createdAt || new Date().toISOString(),
-            items: order.items.map((item: any) => ({
+            items: order.items.map((item) => ({
               id: item.productId,
               name: item.name,
               price: item.price,
@@ -82,7 +82,7 @@ export const OrdersPage: React.FC = () => {
     } catch (e) {
       console.error('Failed to fetch orders from backend', e);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchMyOrders();
@@ -94,7 +94,7 @@ export const OrdersPage: React.FC = () => {
     return () => {
       window.removeEventListener('orders-updated', handleOrdersUpdated);
     };
-  }, []);
+  }, [fetchMyOrders]);
 
   
 
@@ -238,7 +238,7 @@ export const OrdersPage: React.FC = () => {
             <div>
               <select
                 value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value as any)}
+                onChange={(e) => setPaymentFilter(e.target.value as 'all' | 'cod' | 'qr')}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-primary-400 focus:ring-4 focus:ring-primary-100 rounded-2xl text-[15px] focus:outline-none focus:bg-white transition-all font-bold text-slate-700"
               >
                 <option value="all">ช่องทางการชำระทั้งหมด</option>

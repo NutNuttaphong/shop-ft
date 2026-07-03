@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   History, Truck, ShoppingBag, 
@@ -6,7 +6,7 @@ import {
   Package, CheckCircle2, XCircle, Star, ArrowLeft
 } from 'lucide-react';
 import Bill, { OrderData, OrderItem } from './Bill';
-import { restfulApi } from '../../../shared/services/api';
+import { restfulApi, RawOrder } from '../../../shared/services/api';
 import { useAuth } from '../../auth/hooks/useAuth';
 
 export const OrderDetailPage: React.FC = () => {
@@ -36,11 +36,11 @@ export const OrderDetailPage: React.FC = () => {
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
 
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await restfulApi.get<any[]>('/api/orders/my');
+      const res = await restfulApi.get<RawOrder[]>('/api/orders/my');
       if (res.error) {
         setError(res.error);
         return;
@@ -76,7 +76,7 @@ export const OrderDetailPage: React.FC = () => {
           id: rawOrder.id,
           orderNo: rawOrder.orderNo,
           date: rawOrder.createdAt || new Date().toISOString(),
-          items: rawOrder.items.map((item: any) => ({
+          items: rawOrder.items.map((item) => ({
             id: item.productId,
             name: item.name,
             price: item.price,
@@ -109,16 +109,16 @@ export const OrderDetailPage: React.FC = () => {
 
         setOrder(formattedOrder);
       }
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาดในการดึงข้อมูลคำสั่งซื้อ');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user]);
 
   useEffect(() => {
     fetchOrderDetails();
-  }, [id, user]);
+  }, [fetchOrderDetails]);
 
   const handleCopyOrderId = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -176,7 +176,7 @@ export const OrderDetailPage: React.FC = () => {
         alert('บันทึกการรีวิวสินค้าสำเร็จแล้ว ขอบพระคุณสำหรับความคิดเห็นค่ะ');
         setShowReviewModal(false);
       }
-    } catch (err) {
+    } catch {
       alert('เกิดข้อผิดพลาดในการบันทึกรีวิวสินค้า');
     }
   };
@@ -198,7 +198,7 @@ export const OrderDetailPage: React.FC = () => {
         setShowReturnModal(false);
         fetchOrderDetails();
       }
-    } catch (err) {
+    } catch {
       alert('เกิดข้อผิดพลาดในการส่งคำร้องขอคืนเงิน');
     }
   };
@@ -219,7 +219,7 @@ export const OrderDetailPage: React.FC = () => {
         setShowDisputeModal(false);
         fetchOrderDetails();
       }
-    } catch (err) {
+    } catch {
       alert('เกิดข้อผิดพลาดในการเปิดข้อพิพาท');
     }
   };

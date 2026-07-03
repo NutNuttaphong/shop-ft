@@ -68,11 +68,6 @@ export const ChatWidget: React.FC = () => {
     }
   };
 
-  // If user is Admin or not logged in, don't show the chat widget
-  if (!user || user.role === 'admin') {
-    return null;
-  }
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -87,7 +82,7 @@ export const ChatWidget: React.FC = () => {
       } else if (res.error) {
         setError(res.error);
       }
-    } catch (err) {
+    } catch {
       setError('ไม่สามารถดึงข้อมูลประวัติการแชทได้');
     } finally {
       setIsLoading(false);
@@ -129,6 +124,10 @@ export const ChatWidget: React.FC = () => {
     };
   }, []);
 
+  if (!user || user.role === 'admin') {
+    return null;
+  }
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() && !mediaPreview) return;
@@ -153,7 +152,7 @@ export const ChatWidget: React.FC = () => {
       } else if (res.error) {
         setError(res.error);
       }
-    } catch (err) {
+    } catch {
       setError('ส่งข้อความล้มเหลว');
     }
   };
