@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogIn, User, Lock, AlertCircle, ShoppingBag, ShieldCheck, 
   UserPlus, Phone, MapPin, Smile 
@@ -9,6 +9,7 @@ import {
 export const LoginPage: React.FC = () => {
   const { login, register, user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Mode state
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -32,10 +33,12 @@ export const LoginPage: React.FC = () => {
       if (user.role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        const from = (location.state as { from?: { pathname?: string; search?: string } })?.from;
+        const targetPath = from ? `${from.pathname || '/'}${from.search || ''}` : '/';
+        navigate(targetPath, { replace: true });
       }
     }
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, user, navigate, location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +118,18 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-tr from-slate-100 to-slate-200 p-4 font-['Inter',sans-serif]">
+      {/* Quick link to Products */}
+      <div className="w-full max-w-lg mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-primary-600 bg-white/80 hover:bg-white px-3.5 py-2 rounded-xl shadow-xs border border-slate-200 transition-all cursor-pointer"
+        >
+          <ShoppingBag className="w-4 h-4 text-primary-600" />
+          <span>← เลือกดูสินค้าในร้านค้า (ไม่ต้องเข้าสู่ระบบ)</span>
+        </button>
+      </div>
+
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in">
         
         {/* Header decoration */}
@@ -401,8 +416,15 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex items-center justify-between text-slate-500 text-xs">
-          <span>© 2026 ระบบการค้าออนไลน์ FRIST SHOP</span>
-          <span className="font-semibold text-primary-600 hover:underline cursor-pointer">ช่วยเหลือและแนะนำ</span>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="font-bold text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>กลับไปหน้ารายการสินค้า</span>
+          </button>
+          <span>© 2026 FRIST SHOP</span>
         </div>
       </div>
     </div>

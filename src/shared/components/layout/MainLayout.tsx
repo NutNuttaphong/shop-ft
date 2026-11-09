@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../modules/auth/hooks/useAuth';
 import { NotificationProvider } from './NotificationContext';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ChatWidget } from './ChatWidget';
-import { restfulApi } from '../../services/api';
+import { restfulApi, Product } from '../../services/api';
+import { SmartSearchBar } from '../ui/SmartSearchBar';
+import { useWishlist } from '../../hooks/useWishlist';
 import {
   Home,
+  Search,
+  Heart,
   ShoppingBag,
   ShoppingCart,
   LayoutDashboard,
   PackageCheck,
   LogOut,
+  LogIn,
   User,
   Menu,
   X,
@@ -42,9 +47,36 @@ interface MainLayoutProps {
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
+  const { wishlistCount } = useWishlist();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchProducts, setSearchProducts] = useState<Product[]>([]);
+  const [searchModalQuery, setSearchModalQuery] = useState('');
+
+  // Fetch products for global search on first open
+  useEffect(() => {
+    if (isSearchModalOpen && searchProducts.length === 0) {
+      restfulApi.get<Product[]>('/api/products').then(res => {
+        if (res.data) {
+          setSearchProducts(res.data);
+        }
+      }).catch(() => {});
+    }
+  }, [isSearchModalOpen, searchProducts.length]);
+
+  // Global Ctrl+K / Cmd+K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchModalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [textSize, setTextSize] = useState<'standard' | 'large' | 'extra-large'>('standard');
@@ -90,17 +122,32 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/admin/news', label: 'การจัดการข่าวสาร', icon: Newspaper },
       ]
     : [
-        { path: '/', label: 'หน้าหลัก', icon: Home },
-        { path: '/products', label: 'ร้านค้าสั่งซื้อสินค้า', icon: ShoppingBag },
-        { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
-        { path: '/orders', label: 'ประวัติการสั่งซื้อ', icon: History },
+        { path: '/', label: 'หน้าสินค้า', icon: ShoppingBag },
+        { path: '/home', label: 'หน้าหลัก', icon: Home },
         { path: '/promotions', label: 'โปรโมชั่น', icon: Gift },
+        { path: '/wishlist', label: 'สินค้าที่ถูกใจ', icon: Heart, showWishlistBadge: true },
+        { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
+        ...(user ? [{ path: '/orders', label: 'ประวัติการสั่งซื้อ', icon: History }] : []),
       ];
 
   const [cartCount, setCartCount] = useState(0);
 
   // Sync cart count from backend or fallback to local storage
-  const syncCartCount = async () => {
+  const syncCartCount = useCallback(async () => {
+    if (!user) {
+      // Guest: calculate from local storage only, avoid unauthorized /api/cart call
+      try {
+        const cart = JSON.parse(localStorage.getItem('app_cart') || '[]');
+        const count = Array.isArray(cart)
+          ? cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0)
+          : 0;
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+      return;
+    }
+
     try {
       const res = await restfulApi.get<LocalCartItem[]>('/api/cart');
       if (res.data && Array.isArray(res.data)) {
@@ -116,12 +163,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     // Fallback to localStorage if backend is down
     try {
       const cart = JSON.parse(localStorage.getItem('app_cart') || '[]');
-      const count = cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0);
+      const count = Array.isArray(cart)
+        ? cart.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0)
+        : 0;
       setCartCount(count);
     } catch {
       setCartCount(0);
     }
-  };
+  }, [user]);
 
   // Listen to storage/cart-updated events to update cart badge instantly
   useEffect(() => {
@@ -136,7 +185,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('cart-updated', handleStorageChange);
     };
-  }, []);
+  }, [syncCartCount]);
 
   return (
     <NotificationProvider>
@@ -163,7 +212,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <nav className="hidden md:flex ml-10 space-x-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
+                  const isActive = item.path === '/' 
+                    ? (location.pathname === '/' || location.pathname === '/products') 
+                    : location.pathname === item.path;
                   return (
                     <Link
                       key={item.path}
@@ -183,6 +234,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                           {cartCount}
                         </span>
                       )}
+
+                      {item.showWishlistBadge && wishlistCount > 0 && (
+                        <span className="ml-1 px-2.5 py-0.5 text-xs font-extrabold bg-rose-500 text-white rounded-full">
+                          {wishlistCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -190,11 +247,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </div>
 
             {/* Desktop Right Panel (Accessibility + Profile) */}
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-4">
+              {user?.role !== 'admin' && (
+                <button
+                  type="button"
+                  onClick={() => setIsSearchModalOpen(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 text-sm text-slate-400 bg-slate-100/90 hover:bg-slate-200/70 hover:text-slate-700 rounded-xl border border-slate-200/80 transition-all cursor-pointer select-none"
+                  title="ค้นหาสินค้า (Ctrl+K)"
+                >
+                  <Search className="w-4 h-4 text-slate-400" />
+                  <span className="hidden lg:inline text-xs font-semibold">ค้นหาสินค้า...</span>
+                  <kbd className="hidden lg:inline-flex items-center text-[10px] bg-white border border-slate-200 rounded px-1.5 py-0.5 font-sans text-slate-400 font-semibold shadow-2xs">
+                    Ctrl K
+                  </kbd>
+                </button>
+              )}
               
               {user && <NotificationDropdown />}
-              {/* User profile card */}
-              {user && (
+              {/* User profile card or Guest Login */}
+              {user ? (
                 <div className="flex items-center gap-4 cursor-pointer relative">
                   <div onClick={() => setOpen(!open)} className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors shadow-sm select-none">
                     <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 border border-slate-300">
@@ -238,6 +309,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             <span>แก้ไขข้อมูลส่วนตัว</span>
                           </Link>
                         </li>
+                        <li>
+                          <Link
+                            to="/wishlist"
+                            onClick={() => setOpen(false)}
+                            className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-50 hover:text-rose-600 transition-all"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                              <span>สินค้าที่ถูกใจ</span>
+                            </div>
+                            {wishlistCount > 0 && (
+                              <span className="px-2 py-0.5 text-[10px] font-black bg-rose-100 text-rose-600 rounded-full">
+                                {wishlistCount}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
                         {user.role === 'user' && (
                           <li>
                             <Link
@@ -263,24 +351,48 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                   )}
                 </div>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-bold shadow-md shadow-primary-200 transition-all text-sm active:scale-95"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>เข้าสู่ระบบ</span>
+                </Link>
               )}
             </div>
 
             {/* Mobile menu button */}
-            <div className="flex items-center md:hidden space-x-3">
-              {user && user.role === 'user' && (
-                <Link
-                  to="/cart"
-                  id="cart-nav-item-mobile"
-                  className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative cursor-pointer"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 px-2 py-0.5 text-[10px] font-black bg-danger-500 text-white rounded-full">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
+            <div className="flex items-center md:hidden space-x-2">
+              {(!user || user.role === 'user') && (
+                <>
+                  <Link
+                    to="/wishlist"
+                    id="wishlist-nav-item-mobile"
+                    className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative cursor-pointer"
+                    title="สินค้าที่ถูกใจ"
+                  >
+                    <Heart className="w-5 h-5" />
+                    {wishlistCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 px-2 py-0.5 text-[10px] font-black bg-rose-500 text-white rounded-full">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <Link
+                    to="/cart"
+                    id="cart-nav-item-mobile"
+                    className="p-2.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 relative cursor-pointer"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 px-2 py-0.5 text-[10px] font-black bg-danger-500 text-white rounded-full">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                </>
               )}
               
               <button
@@ -329,7 +441,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <div className="space-y-2">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
+                  const isActive = item.path === '/' 
+                    ? (location.pathname === '/' || location.pathname === '/products') 
+                    : location.pathname === item.path;
                   return (
                     <Link
                       key={item.path}
@@ -351,6 +465,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             isActive ? 'bg-white text-primary-600' : 'bg-danger-500 text-white'
                           }`}>
                             {cartCount}
+                          </span>
+                        )}
+                        {item.showWishlistBadge && wishlistCount > 0 && (
+                          <span className={`px-2 py-0.5 mr-2 text-xs font-black rounded-full ${
+                            isActive ? 'bg-white text-rose-600' : 'bg-rose-500 text-white'
+                          }`}>
+                            {wishlistCount}
                           </span>
                         )}
                         <ChevronRight className="w-4 h-4 opacity-50" />
@@ -396,13 +517,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </div>
               </div> */}
 
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-danger-50 hover:bg-danger-100 border border-danger-100 text-danger-700 font-extrabold rounded-2xl transition-colors"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>ออกจากระบบที่ปลอดภัย</span>
-              </button>
+              {user ? (
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-danger-50 hover:bg-danger-100 border border-danger-100 text-danger-700 font-extrabold rounded-2xl transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                  <span>ออกจากระบบที่ปลอดภัย</span>
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-extrabold rounded-2xl transition-colors shadow-md shadow-primary-200"
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span>เข้าสู่ระบบ / สมัครสมาชิก</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -428,6 +560,51 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
       <ChatWidget />
     </div>
+          {/* Global Quick Search Modal (Command Palette) */}
+      {isSearchModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-fade-in"
+          onClick={() => setIsSearchModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 overflow-hidden animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <span className="font-extrabold text-sm text-slate-800 flex items-center gap-2">
+                <Search className="w-4 h-4 text-primary-600" />
+                ค้นหาสินค้าด่วน
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setIsSearchModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors"
+                aria-label="ปิดการค้นหา"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <SmartSearchBar
+                id="global-smart-search"
+                value={searchModalQuery}
+                onChange={setSearchModalQuery}
+                onSearch={(term) => {
+                  setIsSearchModalOpen(false);
+                  navigate(`/products?q=${encodeURIComponent(term)}`);
+                }}
+                onSelectProduct={(p) => {
+                  setIsSearchModalOpen(false);
+                  navigate(`/products/${p.id}`);
+                }}
+                products={searchProducts}
+                autoFocus
+                placeholder="พิมพ์ชื่อสินค้า หมวดหมู่ หรือคำค้นหา..."
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </NotificationProvider>
   );
 };

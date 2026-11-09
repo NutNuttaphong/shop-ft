@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { countStockStatus, filterProductsByStock, StockFilterType, isLowStock, isOutOfStock } from '../../../shared/utils/stockUtils';
 import { restfulApi, Product } from '../../../shared/services/api';
-import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw, Upload, Play, Video } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, AlertCircle, Sparkles, FolderOpen, RefreshCw, Upload, Play, Video, AlertTriangle, Check } from 'lucide-react';
 import { Pagination } from '../../../shared/components/ui/Pagination';
 import { base64ToBlobUrl } from '../utils/mockData';
 
@@ -11,15 +13,27 @@ export const ManageProductsPage: React.FC = () => {
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [stockFilter, setStockFilter] = useState<StockFilterType>(
+    (searchParams.get('stock') as StockFilterType) || 'all'
+  );
+  const [updatingStockId, setUpdatingStockId] = useState<string | null>(null);
+  const [quickStockToast, setQuickStockToast] = useState<string | null>(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3; // 3 items per page to show paginator clearly
+  const itemsPerPage = 10;
 
-  // Reset pagination on search term change
+  useEffect(() => {
+    const sParam = searchParams.get('stock') as StockFilterType | null;
+    if (sParam && ['all', 'low-stock', 'out-of-stock', 'in-stock'].includes(sParam)) {
+      setStockFilter(sParam);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, stockFilter]);
 
   // Form Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -306,11 +320,43 @@ export const ManageProductsPage: React.FC = () => {
     }
   };
 
-  // Filter logic
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Stock status counts
+  const stockCounts = useMemo(() => countStockStatus(products), [products]);
+
+  // Filter logic: text search + stock category
+  const filteredProducts = useMemo(() => {
+    const searchFiltered = products.filter(p =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return filterProductsByStock(searchFiltered, stockFilter);
+  }, [products, searchTerm, stockFilter]);
+
+  const handleQuickStockAdd = async (product: Product, amount: number) => {
+    setUpdatingStockId(product.id);
+    const nextStock = Math.max(0, (product.stock || 0) + amount);
+    try {
+      const payload = {
+        name: product.name,
+        price: product.price,
+        stock: nextStock,
+        category: product.category,
+        imageUrl: product.imageUrl,
+        videoUrl: product.videoUrl,
+        description: product.description
+      };
+      const res = await restfulApi.put<Product>(`/api/products/${product.id}`, payload);
+      if (!res.error) {
+        setProducts(prev => prev.map(p => p.id === product.id ? { ...p, stock: nextStock } : p));
+        setQuickStockToast(`เติมสต็อก "${product.name}" +${amount} ชิ้น สำเร็จ! (รวมเป็น ${nextStock} ชิ้น)`);
+        setTimeout(() => setQuickStockToast(null), 3000);
+      }
+    } catch {
+      alert('ไม่สามารถอัปเดตสต็อกสินค้าได้ในขณะนี้');
+    } finally {
+      setUpdatingStockId(null);
+    }
+  };
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
@@ -321,6 +367,67 @@ export const ManageProductsPage: React.FC = () => {
   return (
     <div className="space-y-8 font-['Inter',sans-serif]">
       
+      {/* Quick Stock Toast */}
+      {quickStockToast && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white font-bold px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 z-50 animate-fade-in border border-slate-700">
+          <Check className="w-4 h-4 text-emerald-400" />
+          <span>{quickStockToast}</span>
+        </div>
+      )}
+
+      {/* Critical Stock Alert Banner */}
+      {(stockCounts.lowStock > 0 || stockCounts.outOfStock > 0) && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-transparent border border-amber-300 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-200">
+              <AlertTriangle className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <span>แจ้งเตือนคลังสินค้าที่ต้องเติมด่วน</span>
+                {stockCounts.outOfStock > 0 && (
+                  <span className="px-2.5 py-0.5 text-xs font-extrabold bg-danger-600 text-white rounded-full">
+                    หมด {stockCounts.outOfStock} รายการ
+                  </span>
+                )}
+                {stockCounts.lowStock > 0 && (
+                  <span className="px-2.5 py-0.5 text-xs font-extrabold bg-amber-500 text-white rounded-full">
+                    ใกล้หมด {stockCounts.lowStock} รายการ
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                พบสินค้าที่ต้องสั่งเข้าคลังด่วน กรุณาเติมสต็อกเพื่อป้องกันสินค้าขาดตลาด
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setStockFilter('low-stock');
+                setSearchParams({ stock: 'low-stock' });
+              }}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs whitespace-nowrap cursor-pointer"
+            >
+              ดูสินค้าที่ต้องเติมสต็อก
+            </button>
+            {stockFilter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStockFilter('all');
+                  setSearchParams({});
+                }}
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer"
+              >
+                ดูสินค้าทั้งหมด
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-1">
@@ -338,19 +445,66 @@ export const ManageProductsPage: React.FC = () => {
       </div>
 
       {/* Control bar */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
-        <div className="relative w-full max-w-md">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="พิมพ์ค้นหาสินค้าด้วยชื่อ หรือหมวดหมู่..."
-            className="w-full pl-5 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-[17px] focus:bg-white focus:border-primary-500 transition-all"
-          />
+      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
+          <div className="relative w-full max-w-md">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="พิมพ์ค้นหาสินค้าด้วยชื่อ หรือหมวดหมู่..."
+              className="w-full pl-5 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-[16px] focus:bg-white focus:border-primary-500 transition-all outline-none"
+            />
+          </div>
+
+          {/* Stock Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: 'all', label: 'สินค้าทั้งหมด', count: stockCounts.total },
+              { id: 'low-stock', label: 'ใกล้หมดสต็อก', count: stockCounts.lowStock },
+              { id: 'out-of-stock', label: 'สินค้าหมด', count: stockCounts.outOfStock },
+              { id: 'in-stock', label: 'สต็อกปกติ', count: stockCounts.inStock },
+            ].map((tab) => {
+              const isActive = stockFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setStockFilter(tab.id as StockFilterType);
+                    if (tab.id === 'all') {
+                      setSearchParams({});
+                    } else {
+                      setSearchParams({ stock: tab.id });
+                    }
+                  }}
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                    isActive
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    isActive
+                      ? 'bg-white/25 text-white'
+                      : tab.id === 'out-of-stock' && tab.count > 0
+                      ? 'bg-rose-100 text-rose-700'
+                      : tab.id === 'low-stock' && tab.count > 0
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        
-        <div className="text-[15px] font-bold text-slate-500">
-          พบสินค้าทั้งหมด <span className="text-primary-600 font-extrabold text-lg">{filteredProducts.length}</span> รายการ
+
+        <div className="flex justify-between items-center text-xs text-slate-500 font-bold pt-2 border-t border-slate-100">
+          <span>แสดงผลตามเงื่อนไข: {stockFilter === 'all' ? 'สินค้าทั้งหมด' : stockFilter === 'low-stock' ? 'สินค้าใกล้หมด (≤ 5 ชิ้น)' : stockFilter === 'out-of-stock' ? 'สินค้าหมด' : 'สินค้าปกติ'}</span>
+          <span>พบสินค้า <span className="text-primary-600 font-black text-sm">{filteredProducts.length}</span> รายการ</span>
         </div>
       </div>
 
@@ -394,8 +548,8 @@ export const ManageProductsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-[16px] text-slate-700 font-medium">
                 {paginatedProducts.map((p) => {
-                  const isLowStock = p.stock <= 5;
-                  const isOutOfStock = p.stock === 0;
+                  const itemLowStock = isLowStock(p.stock);
+                  const itemOutOfStock = isOutOfStock(p.stock);
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-5 pl-8">
@@ -425,15 +579,49 @@ export const ManageProductsPage: React.FC = () => {
                         {p.price.toLocaleString()} บาท
                       </td>
                       <td className="p-5 text-center">
-                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                          isOutOfStock
-                            ? 'bg-danger-50 text-danger-700'
-                            : isLowStock
-                            ? 'bg-warning-50 text-warning-700 font-black animate-pulse'
-                            : 'bg-success-50 text-success-700'
-                        }`}>
-                          {isOutOfStock ? 'ของหมดแล้ว' : `${p.stock} ชิ้น`}
-                        </span>
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            itemOutOfStock
+                              ? 'bg-danger-50 text-danger-700 font-extrabold border border-danger-200'
+                              : itemLowStock
+                              ? 'bg-amber-50 text-amber-700 font-black animate-pulse border border-amber-200'
+                              : 'bg-success-50 text-success-700'
+                          }`}>
+                            {itemOutOfStock ? 'ของหมดแล้ว' : `${p.stock} ชิ้น`}
+                          </span>
+
+                          {/* Quick Replenish buttons */}
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                            <span className="text-[10px] text-slate-400">เติม:</span>
+                            <button
+                              type="button"
+                              disabled={updatingStockId === p.id}
+                              onClick={() => handleQuickStockAdd(p, 5)}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition-colors disabled:opacity-50"
+                              title="เติมสต็อก +5 ชิ้น"
+                            >
+                              +5
+                            </button>
+                            <button
+                              type="button"
+                              disabled={updatingStockId === p.id}
+                              onClick={() => handleQuickStockAdd(p, 10)}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition-colors disabled:opacity-50"
+                              title="เติมสต็อก +10 ชิ้น"
+                            >
+                              +10
+                            </button>
+                            <button
+                              type="button"
+                              disabled={updatingStockId === p.id}
+                              onClick={() => handleQuickStockAdd(p, 20)}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 border border-slate-200 transition-colors disabled:opacity-50"
+                              title="เติมสต็อก +20 ชิ้น"
+                            >
+                              +20
+                            </button>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-5 pr-8 text-center">
                         <div className="flex items-center justify-center gap-2">

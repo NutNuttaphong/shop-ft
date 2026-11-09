@@ -1,54 +1,82 @@
+import { lazy, Suspense } from 'react';
 import { RouteObject } from 'react-router-dom';
 import { RoleGuard } from '../role/guards/RoleGuard';
 import { MainLayout } from '../shared/components/layout/MainLayout';
 import { HomePage } from '../modules/products/pages/HomePage';
 import { CatalogPage } from '../modules/products/pages/CatalogPage';
 import { ProductDetailPage } from '../modules/products/pages/ProductDetailPage';
-import { CartPage } from '../modules/cart/pages/CartPage';
-import { PromotionsPage } from '../modules/promotions/pages/PromotionsPage';
-import { OrdersPage } from '../modules/cart/pages/OrdersPage';
-import { OrderDetailPage } from '../modules/cart/pages/OrderDetailPage';
-import { ProfilePage } from '../modules/auth/pages/ProfilePage';
+import { LoadingFallback } from '../shared/components/ui/LoadingFallback';
+
+const CartPage = lazy(() =>
+  import('../modules/cart/pages/CartPage').then((m) => ({ default: m.CartPage }))
+);
+const PromotionsPage = lazy(() =>
+  import('../modules/promotions/pages/PromotionsPage').then((m) => ({ default: m.PromotionsPage }))
+);
+const OrdersPage = lazy(() =>
+  import('../modules/cart/pages/OrdersPage').then((m) => ({ default: m.OrdersPage }))
+);
+const OrderDetailPage = lazy(() =>
+  import('../modules/cart/pages/OrderDetailPage').then((m) => ({ default: m.OrderDetailPage }))
+);
+const ProfilePage = lazy(() =>
+  import('../modules/auth/pages/ProfilePage').then((m) => ({ default: m.ProfilePage }))
+);
+const WishlistPage = lazy(() =>
+  import('../modules/products/pages/WishlistPage').then((m) => ({ default: m.WishlistPage }))
+);
 
 export const userRoutes: RouteObject[] = [
   {
     path: '/',
     element: (
-      <RoleGuard allowedRoles={['user']}>
-        <MainLayout>
-          <HomePage />
-        </MainLayout>
-      </RoleGuard>
+      <MainLayout>
+        <CatalogPage />
+      </MainLayout>
     ),
   },
   {
     path: '/home',
     element: (
-      <RoleGuard allowedRoles={['user']}>
-        <MainLayout>
-          <HomePage />
-        </MainLayout>
-      </RoleGuard>
+      <MainLayout>
+        <HomePage />
+      </MainLayout>
     ),
   },
   {
     path: '/products',
     element: (
-      <RoleGuard allowedRoles={['user']}>
-        <MainLayout>
-          <CatalogPage />
-        </MainLayout>
-      </RoleGuard>
+      <MainLayout>
+        <CatalogPage />
+      </MainLayout>
     ),
   },
   {
     path: '/products/:id',
     element: (
-      <RoleGuard allowedRoles={['user']}>
-        <MainLayout>
-          <ProductDetailPage />
-        </MainLayout>
-      </RoleGuard>
+      <MainLayout>
+        <ProductDetailPage />
+      </MainLayout>
+    ),
+  },
+  {
+    path: '/promotions',
+    element: (
+      <MainLayout>
+        <Suspense fallback={<LoadingFallback />}>
+          <PromotionsPage />
+        </Suspense>
+      </MainLayout>
+    ),
+  },
+  {
+    path: '/wishlist',
+    element: (
+      <MainLayout>
+        <Suspense fallback={<LoadingFallback />}>
+          <WishlistPage />
+        </Suspense>
+      </MainLayout>
     ),
   },
   {
@@ -56,7 +84,9 @@ export const userRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
-          <CartPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <CartPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -66,7 +96,9 @@ export const userRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
-          <OrdersPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <OrdersPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -76,7 +108,9 @@ export const userRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['user']}>
         <MainLayout>
-          <OrderDetailPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <OrderDetailPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -86,17 +120,9 @@ export const userRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['user', 'admin']}>
         <MainLayout>
-          <ProfilePage />
-        </MainLayout>
-      </RoleGuard>
-    ),
-  },
-  {
-    path: '/promotions',
-    element: (
-      <RoleGuard allowedRoles={['user']}>
-        <MainLayout>
-          <PromotionsPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <ProfilePage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),

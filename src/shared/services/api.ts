@@ -64,7 +64,7 @@ export function getToken(): string | null {
     const session = localStorage.getItem('app_auth_session');
     if (session) {
       const parsed = JSON.parse(session);
-      return parsed.token || null;
+      return typeof parsed?.token === 'string' ? parsed.token : null;
     }
   } catch {
     // Ignore JSON parse or localStorage access errors
@@ -214,132 +214,104 @@ class RestClient {
   }
 
   /**
-   * HTTP GET Request
+   * Centralized HTTP Request Handler
    */
-  async get<T>(path: string): Promise<ApiResponse<T>> {
+  private async request<T>(
+    path: string,
+    options: RequestInit = {}
+  ): Promise<ApiResponse<T>> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'GET',
-        headers: buildHeaders(),
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      const response = await fetch(`${this.baseUrl}${normalizedPath}`, {
+        ...options,
+        signal: controller.signal,
+        headers: buildHeaders(options.headers as Record<string, string> | undefined),
       });
 
-      const json: BackendResponse<T> = await response.json();
+      let json: BackendResponse<T> | null = null;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          json = await response.json();
+        } catch {
+          json = null;
+        }
+      }
 
-      if (!response.ok || !json.success) {
+      if (response.status === 401) {
+        if (typeof window !== 'undefined' && getToken()) {
+          window.dispatchEvent(new Event('auth-unauthorized'));
+        }
         return {
           data: null,
-          error: json.message || `เกิดข้อผิดพลาด (Status: ${response.status})`,
+          error: json?.message || 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง (401)',
+          status: 401,
+        };
+      }
+
+      if (!response.ok || (json && json.success === false)) {
+        return {
+          data: null,
+          error: json?.message || `เกิดข้อผิดพลาดในการเชื่อมต่อ (Status: ${response.status})`,
           status: response.status,
         };
       }
 
-      const data = this.normalizeResponseData<T>(path, json.data);
+      const rawData = json ? json.data : null;
+      const data = this.normalizeResponseData<T>(path, rawData);
       return { data, error: null, status: response.status };
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const message = isAbort
+        ? 'การเชื่อมต่อหมดเวลา (Timeout) กรุณาลองใหม่อีกครั้ง'
+        : err instanceof Error
+        ? err.message
+        : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
       return {
         data: null,
         error: message,
-        status: 500,
+        status: isAbort ? 408 : 500,
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
+  }
+
+  /**
+   * HTTP GET Request
+   */
+  async get<T>(path: string): Promise<ApiResponse<T>> {
+    return this.request<T>(path, { method: 'GET' });
   }
 
   /**
    * HTTP POST Request
    */
-  async post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'POST',
-        headers: buildHeaders(),
-        body: JSON.stringify(body),
-      });
-
-      const json: BackendResponse<T> = await response.json();
-
-      if (!response.ok || !json.success) {
-        return {
-          data: null,
-          error: json.message || `เกิดข้อผิดพลาด (Status: ${response.status})`,
-          status: response.status,
-        };
-      }
-
-      const data = this.normalizeResponseData<T>(path, json.data);
-      return { data, error: null, status: response.status };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบว่า Backend กำลังทำงานอยู่';
-      return {
-        data: null,
-        error: message,
-        status: 500,
-      };
-    }
+  async post<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>(path, {
+      method: 'POST',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
   }
 
   /**
    * HTTP PUT Request
    */
-  async put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'PUT',
-        headers: buildHeaders(),
-        body: JSON.stringify(body),
-      });
-
-      const json: BackendResponse<T> = await response.json();
-
-      if (!response.ok || !json.success) {
-        return {
-          data: null,
-          error: json.message || `เกิดข้อผิดพลาด (Status: ${response.status})`,
-          status: response.status,
-        };
-      }
-
-      const data = this.normalizeResponseData<T>(path, json.data);
-      return { data, error: null, status: response.status };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
-      return {
-        data: null,
-        error: message,
-        status: 500,
-      };
-    }
+  async put<T>(path: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>(path, {
+      method: 'PUT',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
   }
 
   /**
    * HTTP DELETE Request
    */
   async delete<T>(path: string): Promise<ApiResponse<T>> {
-    try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
-        method: 'DELETE',
-        headers: buildHeaders(),
-      });
-
-      const json: BackendResponse<T> = await response.json();
-
-      if (!response.ok || !json.success) {
-        return {
-          data: null,
-          error: json.message || `เกิดข้อผิดพลาด (Status: ${response.status})`,
-          status: response.status,
-        };
-      }
-
-      return { data: json.data, error: null, status: response.status };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
-      return {
-        data: null,
-        error: message,
-        status: 500,
-      };
-    }
+    return this.request<T>(path, { method: 'DELETE' });
   }
 }
 

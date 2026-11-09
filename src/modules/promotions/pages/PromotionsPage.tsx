@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { restfulApi, Promotion, Product, logVisitorVisit } from '../../../shared/services/api';
-import { Gift, Copy, Check, Calendar, AlertCircle, Sparkles, RefreshCw, Flame, Layers, ShoppingBag, Tag } from 'lucide-react';
+import { Gift, Copy, Check, Calendar, AlertCircle, Sparkles, RefreshCw, Flame, Layers, ShoppingBag, Tag, Ticket, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Pagination } from '../../../shared/components/ui/Pagination';
+import { getClaimedVouchers, claimVoucher } from '../../../shared/utils/voucherWallet';
 
 export const PromotionsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export const PromotionsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [claimedToast, setClaimedToast] = useState<string | null>(null);
+  const [claimedVouchers, setClaimedVouchers] = useState<string[]>([]);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,6 +54,13 @@ export const PromotionsPage: React.FC = () => {
     fetchPromotions();
     fetchAllProducts();
     logVisitorVisit(window.location.pathname);
+
+    const syncClaimed = () => {
+      setClaimedVouchers(getClaimedVouchers());
+    };
+    syncClaimed();
+    window.addEventListener('voucher-wallet-updated', syncClaimed);
+    return () => window.removeEventListener('voucher-wallet-updated', syncClaimed);
   }, []);
 
   // Reset page when promotions list changes
@@ -65,6 +75,15 @@ export const PromotionsPage: React.FC = () => {
       setTimeout(() => setCopiedCode(null), 2000);
     } catch (err) {
       console.error('ไม่สามารถคัดลอกโค้ดได้', err);
+    }
+  };
+
+  const handleClaim = (code: string) => {
+    const success = claimVoucher(code);
+    if (success) {
+      setClaimedVouchers(getClaimedVouchers());
+      setClaimedToast(code);
+      setTimeout(() => setClaimedToast(null), 3000);
     }
   };
 
@@ -157,17 +176,48 @@ export const PromotionsPage: React.FC = () => {
           <Gift className="w-96 h-96" />
         </div>
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider mb-4">
-            <Sparkles className="w-4 h-4 text-yellow-300" /> แคมเปญส่วนลดพิเศษสุดคุ้ม
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="inline-flex items-center gap-1.5 bg-white/20 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-yellow-300" /> แคมเปญส่วนลดพิเศษสุดคุ้ม
+            </div>
+            <div
+              data-testid="voucher-wallet-badge"
+              className="inline-flex items-center gap-1.5 bg-white text-pink-700 px-3 py-1 rounded-full text-xs font-extrabold shadow-sm"
+            >
+              <Ticket className="w-3.5 h-3.5 text-pink-600" />
+              <span>กระเป๋าคูปองของฉัน: {claimedVouchers.length} ใบ</span>
+            </div>
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
             โปรโมชั่นและแคมเปญส่วนลดพิเศษ
           </h1>
-          <p className="text-pink-55 text-[16px] sm:text-[18px] leading-relaxed opacity-90">
+          <p className="text-pink-100 text-[16px] sm:text-[18px] leading-relaxed opacity-90 mb-4">
             ช้อปสินค้าสุดคุ้มกับหลากหลายโปรโมชั่น ทั้งโค้ดส่วนลด, Flash Sale ประจำวัน, Bundle Deal ยิ่งซื้อยิ่งลด และส่วนลดตามหมวดหมู่แคมเปญ!
           </p>
+          {claimedVouchers.length > 0 && (
+            <button
+              onClick={() => navigate('/cart')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-bold rounded-xl transition-all border border-white/30 cursor-pointer"
+            >
+              <span>ไปใช้คูปองในตะกร้าสินค้า</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Claimed Toast Notification */}
+      {claimedToast && (
+        <div
+          data-testid="claimed-toast"
+          className="fixed bottom-8 right-8 z-50 bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center space-x-3 border border-emerald-500 animate-fade-in text-[16px] font-bold"
+        >
+          <div className="bg-white/20 p-1.5 rounded-lg">
+            <Ticket className="w-5 h-5" />
+          </div>
+          <span>เก็บคูปอง "{claimedToast}" เรียบร้อยแล้ว! นำไปใช้ได้ทันทีที่หน้าตะกร้า</span>
+        </div>
+      )}
 
       {/* Copied Toast Notification */}
       {copiedCode && (
@@ -286,8 +336,8 @@ export const PromotionsPage: React.FC = () => {
                         ✨ แคมเปญนี้ร่วมรายการลดอัตโนมัติในตะกร้า ✨
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 justify-between">
-                        <div className="pl-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-2.5 justify-between">
+                        <div className="pl-2 mb-1 sm:mb-0">
                           <span className="text-[11px] font-extrabold text-slate-400 block uppercase tracking-wider leading-none mb-1">
                             รหัสโปรโมชั่น
                           </span>
@@ -296,14 +346,36 @@ export const PromotionsPage: React.FC = () => {
                           </span>
                         </div>
 
-                        <button
-                          onClick={() => handleCopyCode(promo.code)}
-                          className="px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-md shadow-pink-50 text-sm"
-                          title="คัดลอกโค้ดนี้"
-                        >
-                          <Copy className="w-4 h-4" />
-                          <span>คัดลอกโค้ด</span>
-                        </button>
+                        <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                          {claimedVouchers.includes(promo.code.toUpperCase()) ? (
+                            <span
+                              data-testid={`claimed-badge-${promo.code}`}
+                              className="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold rounded-xl flex items-center gap-1.5 text-xs sm:text-sm"
+                            >
+                              <Check className="w-4 h-4 text-emerald-600" />
+                              <span>เก็บแล้ว</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleClaim(promo.code)}
+                              data-testid={`claim-btn-${promo.code}`}
+                              className="px-3.5 py-2 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors shadow-sm text-xs sm:text-sm cursor-pointer"
+                              title="เก็บโค้ดนี้เข้ากระเป๋าคูปอง"
+                            >
+                              <Ticket className="w-4 h-4" />
+                              <span>เก็บคูปอง</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => handleCopyCode(promo.code)}
+                            className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold rounded-xl flex items-center gap-1.5 transition-colors text-xs sm:text-sm cursor-pointer"
+                            title="คัดลอกโค้ดนี้"
+                          >
+                            <Copy className="w-4 h-4" />
+                            <span>คัดลอก</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

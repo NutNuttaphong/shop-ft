@@ -1,5 +1,6 @@
-import { RouteObject, Navigate } from 'react-router-dom';
+import { RouteObject } from 'react-router-dom';
 import { LoginPage } from '../modules/auth/pages/LoginPage';
+import { NotFoundPage } from '../shared/pages/NotFoundPage';
 
 export const publicRoutes: RouteObject[] = [
   {
@@ -8,6 +9,6 @@ export const publicRoutes: RouteObject[] = [
   },
   {
     path: '*',
-    element: <Navigate to="/login" replace />,
+    element: <NotFoundPage />,
   },
 ];

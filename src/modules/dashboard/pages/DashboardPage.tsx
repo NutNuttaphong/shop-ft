@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Product, restfulApi, RawOrder } from '../../../shared/services/api';
 
 interface ChatMessage {
@@ -14,6 +15,7 @@ interface ChatMessage {
 }
 import { 
   TrendingUp, 
+  ChevronRight,
   Package, 
   AlertTriangle, 
   Users, 
@@ -22,10 +24,13 @@ import {
   Send,
   MessageSquare,
   X,
-  Paperclip
+  Paperclip,
+  Download
 } from 'lucide-react';
+import { downloadCSV, generateOrdersCSV } from '../../../shared/utils/exportUtils';
 
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [orders, setOrders] = useState<RawOrder[]>([]);
@@ -174,6 +179,13 @@ export const DashboardPage: React.FC = () => {
     };
   }, [selectedContact]);
 
+  const handleExportOrders = () => {
+    if (!orders || orders.length === 0) return;
+    const csv = generateOrdersCSV(orders);
+    const dateStr = new Date().toISOString().split('T')[0];
+    downloadCSV(`frist-shop-orders-${dateStr}.csv`, csv);
+  };
+
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     setIsUpdatingStatus(orderId);
     try {
@@ -286,6 +298,36 @@ export const DashboardPage: React.FC = () => {
         <p className="text-slate-500 text-[16px]">สถิติการใช้งาน ยอดสั่งซื้อ และระดับสต็อกสินค้าในระบบ</p>
       </div>
 
+      {/* Critical Stock Alert Banner */}
+      {lowStockCount > 0 && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-transparent border border-amber-300 rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-amber-200">
+              <AlertTriangle className="w-5 h-5 animate-bounce" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <span>แจ้งเตือนสต็อกสินค้าใกล้หมด</span>
+                <span className="px-2.5 py-0.5 text-xs font-extrabold bg-amber-500 text-white rounded-full">
+                  {lowStockCount} รายการ
+                </span>
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">
+                พบสินค้าที่มีจำนวนคงเหลือน้อยกว่าหรือเท่ากับ 5 ชิ้น กรุณาตรวจสอบและเติมสต็อกสินค้า
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/products?stock=low-stock')}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          >
+            <span>จัดการสต็อกสินค้า</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Grid of Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
@@ -316,15 +358,26 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Low Stock Alert Card */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div 
+          onClick={() => navigate('/admin/products?stock=low-stock')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/admin/products?stock=low-stock'); }}
+          className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-amber-300 hover:shadow-md transition-all group"
+          title="คลิกเพื่อไปที่หน้ารายการสินค้าใกล้หมด"
+        >
           <div className="space-y-2">
-            <span className="text-slate-400 font-bold text-xs uppercase tracking-wider block">สินค้ามีสต็อกต่ำกว่าเกณฑ์</span>
+            <span className="text-slate-400 group-hover:text-amber-600 font-bold text-xs uppercase tracking-wider block transition-colors">
+              สินค้ามีสต็อกต่ำกว่าเกณฑ์
+            </span>
             <span className={`text-3xl font-black block ${lowStockCount > 0 ? 'text-danger-600' : 'text-slate-900'}`}>
               {lowStockCount} รายการ
             </span>
-            <span className="text-xs font-bold text-slate-500 block">ต้องสั่งเข้าคลังด่วน</span>
+            <span className="text-xs font-bold text-slate-500 group-hover:text-slate-700 flex items-center gap-1 transition-colors">
+              ต้องสั่งเข้าคลังด่วน <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </span>
           </div>
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border ${
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-transform group-hover:scale-105 ${
             lowStockCount > 0 
               ? 'bg-danger-50 text-danger-600 border-danger-100 animate-pulse' 
               : 'bg-slate-50 text-slate-400 border-slate-200'
@@ -400,9 +453,21 @@ export const DashboardPage: React.FC = () => {
         {/* Recent orders panel */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-4">
           <div className="space-y-4">
-            <h2 className="text-xl font-extrabold text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-slate-500" /> จัดการคำสั่งซื้อจริงในระบบ
-            </h2>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5 text-slate-500" /> จัดการคำสั่งซื้อจริงในระบบ
+              </h2>
+              <button
+                type="button"
+                onClick={handleExportOrders}
+                disabled={orders.length === 0}
+                className="px-3 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer border border-slate-200/80"
+                title="ส่งออกรายการคำสั่งซื้อทั้งหมดเป็นไฟล์ CSV"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>ส่งออก CSV</span>
+              </button>
+            </div>
 
             <div className="space-y-4 max-h-[30rem] overflow-y-auto pr-1">
               {orders.length === 0 ? (

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications, Notification } from './NotificationContext';
+import { useNotifications, Notification } from './notificationContextDef';
 import { Bell, MailOpen, ShoppingBag } from 'lucide-react';
 
 export const NotificationDropdown: React.FC = () => {

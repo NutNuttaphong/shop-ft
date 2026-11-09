@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { restfulApi } from '../../../shared/services/api';
+import { restfulApi, RawOrder } from '../../../shared/services/api';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -12,8 +12,19 @@ import {
   Percent, 
   Wallet,
   ShoppingBag,
-  Award
+  Award,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
+  Check
 } from 'lucide-react';
+import { 
+  downloadCSV, 
+  generateDailySalesCSV, 
+  generateOrdersCSV, 
+  generateTopProductsCSV 
+} from '../../../shared/utils/exportUtils';
 
 interface AnalyticsData {
   totalSales: number;
@@ -48,6 +59,64 @@ export const AnalyticsPage: React.FC = () => {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isExportingOrders, setIsExportingOrders] = useState(false);
+  const [exportToast, setExportToast] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setExportToast(message);
+    setTimeout(() => {
+      setExportToast(null);
+    }, 3500);
+  };
+
+  const handleExportDailySales = () => {
+    if (!data?.dailySales || data.dailySales.length === 0) {
+      showToast('ไม่มีข้อมูลสรุปยอดขายสำหรับส่งออก');
+      return;
+    }
+    const csv = generateDailySalesCSV(data.dailySales);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const success = downloadCSV(`frist-shop-daily-sales-${dateStr}.csv`, csv);
+    if (success) {
+      showToast('ดาวน์โหลดรายงานสรุปยอดขายรายวัน (CSV) สำเร็จ');
+    }
+  };
+
+  const handleExportTopProducts = () => {
+    if (!data?.topProducts || data.topProducts.length === 0) {
+      showToast('ไม่มีข้อมูลสินค้าขายดีสำหรับส่งออก');
+      return;
+    }
+    const csv = generateTopProductsCSV(data.topProducts);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const success = downloadCSV(`frist-shop-top-products-${dateStr}.csv`, csv);
+    if (success) {
+      showToast('ดาวน์โหลดรายงานสินค้าขายดี (CSV) สำเร็จ');
+    }
+  };
+
+  const handleExportOrders = async () => {
+    setIsExportingOrders(true);
+    try {
+      const res = await restfulApi.get<RawOrder[]>('/api/orders');
+      const orders = res.data || [];
+      if (orders.length === 0) {
+        showToast('ไม่มีรายการคำสั่งซื้อสำหรับส่งออกในขณะนี้');
+        return;
+      }
+      const csv = generateOrdersCSV(orders);
+      const dateStr = new Date().toISOString().split('T')[0];
+      const success = downloadCSV(`frist-shop-all-orders-${dateStr}.csv`, csv);
+      if (success) {
+        showToast(`ดาวน์โหลดรายการคำสั่งซื้อ ${orders.length} รายการ (CSV) สำเร็จ`);
+      }
+    } catch {
+      showToast('ไม่สามารถดึงข้อมูลคำสั่งซื้อเพื่อส่งออกได้');
+    } finally {
+      setIsExportingOrders(false);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -144,13 +213,80 @@ export const AnalyticsPage: React.FC = () => {
           <p className="text-slate-500 text-[16px]">สรุปรายงานรายได้ ยอดจำหน่าย ทราฟฟิกผู้เข้าใช้งาน และประสิทธิภาพทางการตลาด</p>
         </div>
         
-        <button
-          onClick={fetchAnalytics}
-          className="px-5 py-3 border-2 border-slate-200 bg-white hover:bg-slate-50 font-bold rounded-2xl flex items-center gap-2 transition-all min-h-[48px] text-slate-700 shadow-xs"
-        >
-          <RefreshCw className="w-4 h-4 text-slate-500" />
-          <span>รีเฟรชข้อมูล</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={fetchAnalytics}
+            className="px-5 py-3 border-2 border-slate-200 bg-white hover:bg-slate-50 font-bold rounded-2xl flex items-center gap-2 transition-all min-h-[48px] text-slate-700 shadow-xs cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4 text-slate-500" />
+            <span>รีเฟรชข้อมูล</span>
+          </button>
+
+          {/* Export Dropdown Menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl flex items-center gap-2 transition-all min-h-[48px] shadow-sm shadow-emerald-200 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>ส่งออกรายงาน</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-slate-200 shadow-xl p-2 z-30 animate-fade-in space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExportDailySales();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <div>
+                    <span className="block">สรุปยอดขายรายวัน (CSV)</span>
+                    <span className="block text-[11px] text-slate-400 font-normal">สถิติรายวัน 7 วันย้อนหลัง</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleExportTopProducts();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 text-xs font-bold flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <Award className="w-4 h-4 text-pink-600 flex-shrink-0" />
+                  <div>
+                    <span className="block">สินค้าขายดี 5 อันดับ (CSV)</span>
+                    <span className="block text-[11px] text-slate-400 font-normal">จัดอันดับตามจำนวนที่ขายได้</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isExportingOrders}
+                  onClick={() => {
+                    handleExportOrders();
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 text-xs font-bold flex items-center gap-2.5 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-primary-600 flex-shrink-0" />
+                  <div>
+                    <span className="block">รายการคำสั่งซื้อทั้งหมด (CSV)</span>
+                    <span className="block text-[11px] text-slate-400 font-normal">
+                      {isExportingOrders ? 'กำลังดึงข้อมูล...' : 'ข้อมูลลูกค้า, ขนส่ง, ยอดรวม'}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
@@ -498,11 +634,20 @@ export const AnalyticsPage: React.FC = () => {
         
         {/* Daily Financial Report Table */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs lg:col-span-2 space-y-6">
-          <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="pb-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-extrabold text-slate-900">รายงานรายได้รายวัน</h2>
               <p className="text-xs text-slate-400 mt-0.5">ตารางวิเคราะห์รายวันย้อนหลัง 7 วัน</p>
             </div>
+            <button
+              type="button"
+              onClick={handleExportDailySales}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer w-fit border border-slate-200/80"
+              title="ส่งออกตารางสรุปรายได้รายวันเป็นไฟล์ CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-slate-600" />
+              <span>ดาวน์โหลดตาราง CSV</span>
+            </button>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-slate-100">
@@ -570,6 +715,16 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Export Toast Notification */}
+      {exportToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs sm:text-sm font-bold animate-fade-in border border-slate-700">
+          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
+            <Check className="w-3.5 h-3.5" />
+          </div>
+          <span>{exportToast}</span>
+        </div>
+      )}
 
     </div>
   );

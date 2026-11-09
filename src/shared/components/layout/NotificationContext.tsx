@@ -1,35 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { restfulApi, API_BASE_URL, getToken } from '../../services/api';
 import { useAuth } from '../../../modules/auth/hooks/useAuth';
 import { Bell, X } from 'lucide-react';
-
-export interface Notification {
-  id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: string;
-  orderId: string;
-  read: boolean;
-  createdAt: string;
-}
-
-interface NotificationContextType {
-  notifications: Notification[];
-  unreadCount: number;
-  markAsRead: (id: string) => Promise<void>;
-  markAllAsRead: () => Promise<void>;
-}
-
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
-
-export const useNotifications = () => {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
-  }
-  return context;
-};
+import { Notification, NotificationContext } from './notificationContextDef';
 
 interface ProviderProps {
   children: React.ReactNode;
@@ -106,45 +79,66 @@ export const NotificationProvider: React.FC<ProviderProps> = ({ children }) => {
     const token = getToken();
     if (!token) return;
 
-    // Connect to SSE endpoint
-    const url = `${API_BASE_URL}/api/notifications/subscribe?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(url);
+    // Connect to SSE endpoint with resilient reconnect
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryCount = 0;
+    let activeEventSource: EventSource | null = null;
+    let isDisposed = false;
 
-    eventSource.addEventListener('NOTIFICATION', (event: MessageEvent) => {
-      try {
-        const newNotif = JSON.parse(event.data) as Notification;
-        
-        // Add to list
-        setNotifications(prev => [newNotif, ...prev]);
-        setUnreadCount(prev => prev + 1);
-        
-        // Trigger visual Toast
-        triggerToast(newNotif.title, newNotif.message);
+    const connectSSE = () => {
+      if (isDisposed) return;
+      const currentToken = getToken();
+      if (!currentToken) return;
 
-        // Dispatch general event for pages (like OrdersPage) to reload data
-        window.dispatchEvent(new Event('orders-updated'));
-      } catch (err) {
-        console.error('Error parsing notification', err);
-      }
-    });
+      const url = `${API_BASE_URL}/api/notifications/subscribe?token=${encodeURIComponent(currentToken)}`;
+      const eventSource = new EventSource(url);
+      activeEventSource = eventSource;
 
-    eventSource.addEventListener('CHAT_MESSAGE', (event: MessageEvent) => {
-      try {
-        const chatMsg = JSON.parse(event.data);
-        // Dispatch custom event for real-time chat message receipt
-        window.dispatchEvent(new CustomEvent('chat-message-received', { detail: chatMsg }));
-      } catch (err) {
-        console.error('Error parsing chat message', err);
-      }
-    });
+      eventSource.onopen = () => {
+        retryCount = 0; // Reset retries on successful connection
+      };
 
-    eventSource.onerror = (err) => {
-      console.error('SSE Error:', err);
-      eventSource.close();
+      eventSource.addEventListener('NOTIFICATION', (event: MessageEvent) => {
+        try {
+          const newNotif = JSON.parse(event.data) as Notification;
+          setNotifications(prev => [newNotif, ...prev]);
+          setUnreadCount(prev => prev + 1);
+          triggerToast(newNotif.title, newNotif.message);
+          window.dispatchEvent(new Event('orders-updated'));
+        } catch (err) {
+          console.error('Error parsing notification', err);
+        }
+      });
+
+      eventSource.addEventListener('CHAT_MESSAGE', (event: MessageEvent) => {
+        try {
+          const chatMsg = JSON.parse(event.data);
+          window.dispatchEvent(new CustomEvent('chat-message-received', { detail: chatMsg }));
+        } catch (err) {
+          console.error('Error parsing chat message', err);
+        }
+      });
+
+      eventSource.onerror = (err) => {
+        console.error('SSE Error:', err);
+        eventSource.close();
+        if (isDisposed) return;
+
+        // Exponential backoff reconnect: max 3 attempts (5s, 10s, 20s)
+        if (retryCount < 3) {
+          retryCount++;
+          const delay = Math.min(5000 * Math.pow(2, retryCount - 1), 20000);
+          retryTimer = setTimeout(connectSSE, delay);
+        }
+      };
     };
 
+    connectSSE();
+
     return () => {
-      eventSource.close();
+      isDisposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      activeEventSource?.close();
     };
   }, [user, fetchNotifications]);
 

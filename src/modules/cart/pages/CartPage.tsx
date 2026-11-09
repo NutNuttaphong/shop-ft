@@ -3,11 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ShoppingBag, Trash2, Plus, Minus, CreditCard, ArrowLeft, 
   HeartHandshake, MapPin, User, Phone, Truck, QrCode, 
-  AlertCircle, CheckCircle2, Printer 
+  AlertCircle, CheckCircle2, Printer, Ticket 
 } from 'lucide-react';
 import Bill from './Bill';
+import { getSavedAddresses, saveAddress, DeliveryAddress } from '../../../shared/utils/addressBook';
+import { AddressModal } from '../../../shared/components/ui/AddressModal';
 import { useAuth } from '../../auth/hooks/useAuth';
 import { restfulApi, Promotion } from '../../../shared/services/api';
+import { getClaimedVouchers } from '../../../shared/utils/voucherWallet';
 
 interface CartItem {
   productId: string;
@@ -57,6 +60,63 @@ export const CartPage: React.FC = () => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  
+  // Saved Address Book states
+  const [savedAddresses, setSavedAddresses] = useState<DeliveryAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [saveToAddressBook, setSaveToAddressBook] = useState(false);
+
+  // Load saved addresses and pre-populate default address
+  const loadSavedAddresses = useCallback(() => {
+    if (user) {
+      const list = getSavedAddresses(user.username, {
+        name: user.displayName,
+        phone: user.phone,
+        address: user.address
+      });
+      setSavedAddresses(list);
+      const def = list.find(a => a.isDefault) || (list.length > 0 ? list[0] : null);
+      if (def) {
+        setSelectedAddressId(def.id);
+        setCustomerName(prev => prev || def.recipientName);
+        setCustomerPhone(prev => prev || def.phone);
+        setCustomerAddress(prev => prev || def.addressLine);
+      }
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadSavedAddresses();
+    window.addEventListener('addresses-updated', loadSavedAddresses);
+    return () => window.removeEventListener('addresses-updated', loadSavedAddresses);
+  }, [loadSavedAddresses]);
+
+  const handleSelectSavedAddress = (addr: DeliveryAddress) => {
+    setSelectedAddressId(addr.id);
+    setCustomerName(addr.recipientName);
+    setCustomerPhone(addr.phone);
+    setCustomerAddress(addr.addressLine);
+    if (formErrors.name) setFormErrors(prev => ({ ...prev, name: undefined }));
+    if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: undefined }));
+    if (formErrors.address) setFormErrors(prev => ({ ...prev, address: undefined }));
+  };
+
+  const handleSaveNewAddressFromCheckout = (addrData: {
+    label: string;
+    recipientName: string;
+    phone: string;
+    addressLine: string;
+    isDefault?: boolean;
+  }) => {
+    if (!user) return;
+    const updated = saveAddress(addrData, user.username);
+    setSavedAddresses(updated);
+    const created = updated.find(a => a.addressLine === addrData.addressLine) || updated[0];
+    if (created) {
+      handleSelectSavedAddress(created);
+    }
+  };
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'qr'>('cod');
   const [showQrModal, setShowQrModal] = useState(false);
   const [uploadedSlipName, setUploadedSlipName] = useState('');
@@ -81,6 +141,8 @@ export const CartPage: React.FC = () => {
   const [discountAmount, setDiscountAmount] = useState(0);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponSuccess, setCouponSuccess] = useState(false);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [claimedVouchers, setClaimedVouchers] = useState<string[]>([]);
 
   // Coins states
   const [userCoins, setUserCoins] = useState(150); // defaults to 150 coins
@@ -102,6 +164,16 @@ export const CartPage: React.FC = () => {
       }
     };
     fetchActivePromotions();
+  }, []);
+
+  // Sync claimed vouchers from wallet
+  useEffect(() => {
+    const syncClaimed = () => {
+      setClaimedVouchers(getClaimedVouchers());
+    };
+    syncClaimed();
+    window.addEventListener('voucher-wallet-updated', syncClaimed);
+    return () => window.removeEventListener('voucher-wallet-updated', syncClaimed);
   }, []);
 
   // Load coins from localStorage
@@ -474,11 +546,11 @@ export const CartPage: React.FC = () => {
   const coinsToUse = Math.min(Math.floor(discountedTotal * 0.25), userCoins);
   const finalTotal = Math.max(0, discountedTotal - (useCoins ? coinsToUse : 0));
 
-  const handleApplyCoupon = async () => {
+  const handleApplyCoupon = async (codeOverride?: string) => {
     setCouponError(null);
     setCouponSuccess(false);
 
-    const code = promoCodeInput.trim().toUpperCase();
+    const code = (codeOverride || promoCodeInput).trim().toUpperCase();
     if (!code) {
       setCouponError('กรุณากรอกรหัสคูปองค่ะ');
       return;
@@ -512,6 +584,7 @@ export const CartPage: React.FC = () => {
       setAppliedPromoCode(code);
       setCouponSuccess(true);
       setPromoCodeInput('');
+      setShowVoucherModal(false);
       localStorage.setItem('app_applied_coupon', JSON.stringify(promo));
     } catch {
       setCouponError('รหัสคูปองไม่ถูกต้อง หรือเชื่อมต่อเซิร์ฟเวอร์ไม่ได้ค่ะ');
@@ -691,6 +764,55 @@ export const CartPage: React.FC = () => {
 
               {/* Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Saved Address Book Selector */}
+                {savedAddresses.length > 0 && (
+                  <div className="sm:col-span-2 space-y-2 pb-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-primary-600" />
+                        เลือกจากสมุดที่อยู่ของคุณ
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddressModalOpen(true)}
+                        className="text-xs font-bold text-primary-600 hover:text-primary-700 hover:underline cursor-pointer"
+                      >
+                        + เพิ่มที่อยู่ใหม่
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {savedAddresses.map((addr) => {
+                        const isSelected = selectedAddressId === addr.id;
+                        return (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => handleSelectSavedAddress(addr)}
+                            className={`px-3 py-2 rounded-xl text-left border transition-all flex items-center gap-2 cursor-pointer ${
+                              isSelected
+                                ? 'border-primary-500 bg-primary-50/80 text-primary-900 shadow-xs'
+                                : 'border-slate-200 bg-slate-50/70 hover:bg-white text-slate-700'
+                            }`}
+                          >
+                            <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-primary-600' : 'bg-slate-300'}`} />
+                            <div className="text-xs">
+                              <div className="font-extrabold flex items-center gap-1">
+                                <span>{addr.label}</span>
+                                {addr.isDefault && (
+                                  <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded font-bold">
+                                    ค่าเริ่มต้น
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-slate-500 font-medium truncate max-w-[180px]">{addr.recipientName} • {addr.phone}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <label className="text-[14px] font-bold text-slate-700 block">
                     ชื่อ-นามสกุล ผู้รับ <span className="text-danger-500">*</span>
@@ -757,6 +879,19 @@ export const CartPage: React.FC = () => {
                     <p className="text-xs font-bold text-danger-500 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" /> {formErrors.address}
                     </p>
+                  )}
+                                  {user && (
+                    <label className="inline-flex items-center gap-2 cursor-pointer select-none pt-1">
+                      <input
+                        type="checkbox"
+                        checked={saveToAddressBook}
+                        onChange={(e) => setSaveToAddressBook(e.target.checked)}
+                        className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 border-slate-300"
+                      />
+                      <span className="text-xs font-bold text-slate-600">
+                        บันทึกที่อยู่นี้ลงในสมุดที่อยู่สำหรับครั้งต่อไป
+                      </span>
+                    </label>
                   )}
                 </div>
 
@@ -936,7 +1071,18 @@ export const CartPage: React.FC = () => {
 
             {/* Coupon Code Block */}
             <div className="space-y-2.5">
-              <span className="text-[14px] font-bold text-slate-700 block">คูปองส่วนลด</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[14px] font-bold text-slate-700 block">คูปองส่วนลด</span>
+                <button
+                  type="button"
+                  data-testid="open-voucher-wallet-btn"
+                  onClick={() => setShowVoucherModal(true)}
+                  className="text-xs font-bold text-pink-600 hover:text-pink-700 flex items-center gap-1 cursor-pointer"
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>กระเป๋าคูปอง ({claimedVouchers.length})</span>
+                </button>
+              </div>
               
               {appliedPromoCode ? (
                 <div className="flex items-center justify-between p-3 bg-success-50 rounded-2xl border border-success-200">
@@ -953,7 +1099,8 @@ export const CartPage: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder="ใส่รหัสคูปอง เช่น FRIST10"
@@ -963,13 +1110,29 @@ export const CartPage: React.FC = () => {
                   />
                   <button
                     type="button"
-                    onClick={handleApplyCoupon}
-                    className="px-4 py-2 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors focus:outline-none"
+                    onClick={() => handleApplyCoupon()}
+                    className="px-4 py-2 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors focus:outline-none cursor-pointer"
                   >
                     ใช้โค้ด
                   </button>
                 </div>
-              )}
+
+                <button
+                  type="button"
+                  data-testid="select-my-vouchers-btn"
+                  onClick={() => setShowVoucherModal(true)}
+                  className="w-full py-2.5 px-3 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 rounded-xl text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Ticket className="w-4 h-4 text-pink-600" />
+                    เลือกคูปองของฉัน
+                  </span>
+                  <span className="bg-pink-600 text-white text-[11px] px-2 py-0.5 rounded-full font-black">
+                    {claimedVouchers.length} ใบ
+                  </span>
+                </button>
+              </div>
+            )}
               {couponError && <p className="text-xs text-danger-600 font-bold">{couponError}</p>}
               {couponSuccess && <p className="text-xs text-success-600 font-bold">ใช้คูปองส่วนลดสำเร็จแล้วค่ะ!</p>}
             </div>
@@ -1077,7 +1240,152 @@ export const CartPage: React.FC = () => {
         </div>
       )}
 
-      {/* QR Code Payment Simulation Modal */}
+            {/* Delivery Address Modal */}
+      <AddressModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onSave={handleSaveNewAddressFromCheckout}
+        defaultRecipientName={customerName || user?.displayName || ''}
+        defaultPhone={customerPhone || user?.phone || ''}
+      />
+
+      {/* Voucher Wallet Selector Modal */}
+      {showVoucherModal && (
+        <div 
+          data-testid="voucher-modal"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl animate-scale-up border border-slate-100 my-8">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="font-extrabold text-xl text-slate-900 flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-pink-600" />
+                คูปองส่วนลดของฉัน
+              </h3>
+              <button
+                onClick={() => setShowVoucherModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                title="ปิด"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {claimedVouchers.length === 0 ? (
+                <div className="text-center py-8 space-y-3">
+                  <div className="w-12 h-12 bg-pink-50 text-pink-400 rounded-full flex items-center justify-center mx-auto">
+                    <Ticket className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-700">คุณยังไม่มีคูปองที่เก็บไว้ในกระเป๋า</p>
+                  <p className="text-xs text-slate-400">เลือกดูและเก็บคูปองส่วนลดสุดคุ้มได้ที่หน้าโปรโมชั่น</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVoucherModal(false);
+                      navigate('/promotions');
+                    }}
+                    className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  >
+                    ไปที่ศูนย์รวมคูปอง
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {claimedVouchers.map((code) => {
+                    const promo = activePromotions.find(p => p.code.toUpperCase() === code);
+                    const isApplied = appliedPromoCode === code;
+                    const minSpend = promo ? promo.minPurchase : 0;
+                    const isEligible = grandTotal >= minSpend;
+                    const isPercent = promo && (promo.discountType === 'PERCENTAGE' || promo.discountType === 'percentage');
+                    const discountText = promo 
+                      ? (isPercent ? `ลด ${promo.discountValue}%` : `ลด ${promo.discountValue} บาท`) 
+                      : 'คูปองส่วนลดพิเศษ';
+
+                    return (
+                      <div
+                        key={code}
+                        data-testid={`voucher-item-${code}`}
+                        className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          isApplied
+                            ? 'border-emerald-500 bg-emerald-50/50'
+                            : isEligible
+                            ? 'border-slate-200 bg-white hover:border-pink-300 hover:shadow-xs'
+                            : 'border-slate-100 bg-slate-50/80 opacity-70'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-base text-slate-900 tracking-wider">
+                              {code}
+                            </span>
+                            <span className="px-2 py-0.5 bg-pink-100 text-pink-700 font-extrabold text-xs rounded-md">
+                              {discountText}
+                            </span>
+                          </div>
+                          {promo?.name && (
+                            <p className="text-xs font-bold text-slate-600">{promo.name}</p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs">
+                            {minSpend > 0 ? (
+                              <span className={isEligible ? 'text-slate-500' : 'text-danger-600 font-bold'}>
+                                ซื้อขั้นต่ำ {minSpend.toLocaleString()} บาท {!isEligible && `(ขาดอีก ${(minSpend - grandTotal).toLocaleString()} บาท)`}
+                              </span>
+                            ) : (
+                              <span className="text-emerald-600 font-semibold">ไม่มีขั้นต่ำ</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          {isApplied ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              กำลังใช้งาน
+                            </span>
+                          ) : isEligible ? (
+                            <button
+                              type="button"
+                              data-testid={`apply-voucher-btn-${code}`}
+                              onClick={() => handleApplyCoupon(code)}
+                              className="w-full sm:w-auto px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
+                            >
+                              ใช้คูปองนี้
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className="w-full sm:w-auto px-4 py-2 bg-slate-200 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed"
+                            >
+                              ยอดไม่ถึงเกณฑ์
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowVoucherModal(false);
+                        navigate('/promotions');
+                      }}
+                      className="text-xs font-bold text-pink-600 hover:text-pink-700 hover:underline cursor-pointer"
+                    >
+                      + เก็บโค้ดส่วนลดเพิ่มเติมที่ศูนย์รวมคูปอง
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+{/* QR Code Payment Simulation Modal */}
       {showQrModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-6 shadow-2xl animate-scale-up border border-slate-100 my-8">

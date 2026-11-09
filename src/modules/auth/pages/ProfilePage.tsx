@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { User, Phone, MapPin, CheckCircle2, ArrowLeft, Save, AlertCircle, ShieldAlert, Heart, Star, ShoppingBag } from 'lucide-react';
+import { 
+  User, Phone, MapPin, CheckCircle2, ArrowLeft, Save, 
+  AlertCircle, ShieldAlert, Heart, Star, ShoppingBag,
+  Plus, Home, Building2, Tag, Check, Edit3, Trash2
+} from 'lucide-react';
 import { getFollowedShops, toggleFollowShop, Shop } from '../../products/utils/mockData';
+import { getSavedAddresses, saveAddress, deleteAddress, setDefaultAddress, DeliveryAddress } from '../../../shared/utils/addressBook';
+import { AddressModal } from '../../../shared/components/ui/AddressModal';
 
 export const ProfilePage: React.FC = () => {
   const { user, updateProfile } = useAuth();
@@ -43,6 +49,65 @@ export const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showToast, setShowToast] = useState(false);
   
+  // Address Book state
+  const [addresses, setAddresses] = useState<DeliveryAddress[]>([]);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<DeliveryAddress | null>(null);
+
+  // Load saved addresses
+  const loadAddresses = useCallback(() => {
+    if (user) {
+      const list = getSavedAddresses(user.username, {
+        name: user.displayName,
+        phone: user.phone,
+        address: user.address
+      });
+      setAddresses(list);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadAddresses();
+    window.addEventListener('addresses-updated', loadAddresses);
+    return () => window.removeEventListener('addresses-updated', loadAddresses);
+  }, [loadAddresses]);
+
+  const handleSaveAddress = (addrData: {
+    id?: string;
+    label: string;
+    recipientName: string;
+    phone: string;
+    addressLine: string;
+    isDefault?: boolean;
+  }) => {
+    if (!user) return;
+    const updated = saveAddress(addrData, user.username);
+    setAddresses(updated);
+    // If it was default, sync with profile address field
+    const def = updated.find(a => a.isDefault);
+    if (def) {
+      setAddress(def.addressLine);
+      updateProfile(displayName.trim(), def.phone || phone.trim(), def.addressLine);
+    }
+  };
+
+  const handleDeleteAddress = (id: string) => {
+    if (!user) return;
+    const updated = deleteAddress(id, user.username);
+    setAddresses(updated);
+  };
+
+  const handleSetDefault = (id: string) => {
+    if (!user) return;
+    const updated = setDefaultAddress(id, user.username);
+    setAddresses(updated);
+    const def = updated.find(a => a.id === id);
+    if (def) {
+      setAddress(def.addressLine);
+      updateProfile(displayName.trim(), def.phone || phone.trim(), def.addressLine);
+    }
+  };
+
   const [formErrors, setFormErrors] = useState<{
     displayName?: string;
     phone?: string;
@@ -296,6 +361,130 @@ export const ProfilePage: React.FC = () => {
 
         </form>
       </div>
+
+      {/* Address Book Section */}
+      <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+              <MapPin className="w-7 h-7 text-primary-600" />
+              สมุดที่อยู่จัดส่งสินค้า ({addresses.length})
+            </h2>
+            <p className="text-slate-400 text-sm font-semibold">
+              บันทึกที่อยู่จัดส่งได้หลายที่อยู่เพื่อความสะดวกรวดเร็วในการเลือกซื้อสินค้า
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingAddress(null);
+              setIsAddressModalOpen(true);
+            }}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl text-sm font-bold shadow-md shadow-primary-100 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            <span>เพิ่มที่อยู่ใหม่</span>
+          </button>
+        </div>
+
+        {addresses.length === 0 ? (
+          <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+            <MapPin className="w-10 h-10 text-slate-300 mx-auto" />
+            <h4 className="font-bold text-slate-600 text-sm">ยังไม่มีที่อยู่จัดส่งในระบบค่ะ</h4>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              คุณสามารถเพิ่มที่อยู่บ้าน ที่ทำงาน หรือคอนโดเพื่อใช้เป็นตัวเลือกในการจัดส่งสินค้าได้
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingAddress(null);
+                setIsAddressModalOpen(true);
+              }}
+              className="text-xs font-bold text-primary-600 hover:text-primary-700 hover:underline"
+            >
+              + เพิ่มที่อยู่แรกของคุณ
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {addresses.map((addr) => (
+              <div
+                key={addr.id}
+                className={`p-5 rounded-2xl border-2 transition-all relative flex flex-col justify-between ${
+                  addr.isDefault
+                    ? 'border-primary-500 bg-primary-50/20 shadow-xs'
+                    : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-slate-100 text-slate-700">
+                      {addr.label === 'บ้าน' && <Home className="w-3.5 h-3.5" />}
+                      {addr.label === 'ที่ทำงาน' && <Building2 className="w-3.5 h-3.5" />}
+                      {addr.label !== 'บ้าน' && addr.label !== 'ที่ทำงาน' && <Tag className="w-3.5 h-3.5" />}
+                      <span>{addr.label}</span>
+                    </span>
+
+                    {addr.isDefault ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-700">
+                        <Check className="w-3 h-3" /> ค่าเริ่มต้น
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefault(addr.id)}
+                        className="text-xs font-bold text-slate-400 hover:text-primary-600 hover:underline"
+                      >
+                        ตั้งเป็นค่าเริ่มต้น
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-sm text-slate-800">{addr.recipientName}</span>
+                      <span className="text-xs text-slate-500 font-medium">({addr.phone})</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      {addr.addressLine}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-3 mt-3 border-t border-slate-200/60 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAddress(addr);
+                      setIsAddressModalOpen(true);
+                    }}
+                    className="text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> แก้ไข
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteAddress(addr.id)}
+                    className="text-rose-500 hover:text-rose-600 hover:underline flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> ลบ
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Address Modal */}
+      <AddressModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onSave={handleSaveAddress}
+        initialData={editingAddress}
+        defaultRecipientName={displayName || user?.displayName || ''}
+        defaultPhone={phone || user?.phone || ''}
+      />
 
       {/* Followed Shops section */}
       <div className="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 sm:p-8 space-y-6">

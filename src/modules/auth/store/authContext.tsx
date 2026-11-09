@@ -1,19 +1,8 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserSession } from '../../../role/roles';
+import { AuthContext } from './authContextDef';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-
-interface AuthContextType {
-  user: UserSession | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ success: boolean; role?: 'admin' | 'user'; error?: string }>;
-  register: (username: string, password: string, displayName: string, phone?: string, address?: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
-  updateProfile: (displayName: string, phone?: string, address?: string) => void;
-}
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSession | null>(null);
@@ -24,12 +13,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedSession = localStorage.getItem('app_auth_session');
     if (storedSession) {
       try {
-        setUser(JSON.parse(storedSession));
+        const parsed = JSON.parse(storedSession);
+        setUser(parsed);
+
+        // Validate token with backend if present
+        if (parsed?.token && API_BASE_URL) {
+          fetch(`${API_BASE_URL}/api/users/profile`, {
+            headers: {
+              'Authorization': `Bearer ${parsed.token}`,
+              'Content-Type': 'application/json'
+            }
+          }).then(res => {
+            if (res.status === 401 || res.status === 403) {
+              setUser(null);
+              localStorage.removeItem('app_auth_session');
+            }
+          }).catch(() => {
+            // Keep session on network/offline fallback
+          });
+        }
       } catch {
         localStorage.removeItem('app_auth_session');
       }
     }
     setIsLoading(false);
+
+    const handleUnauthorized = () => {
+      setUser(null);
+      localStorage.removeItem('app_auth_session');
+    };
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth-unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = async (username: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'user'; error?: string }> => {

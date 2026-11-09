@@ -3,16 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   History, Truck, ShoppingBag, 
   Printer, RotateCcw, Copy, Check, X, AlertCircle, 
-  Package, CheckCircle2, XCircle, Star, ArrowLeft
+  Package, CheckCircle2, XCircle, Star, ArrowLeft,
+  MapPin, CreditCard, ExternalLink
 } from 'lucide-react';
 import Bill, { OrderData, OrderItem } from './Bill';
 import { restfulApi, RawOrder } from '../../../shared/services/api';
 import { useAuth } from '../../auth/hooks/useAuth';
+import { getCarrierTrackingUrl } from '../../../shared/utils/tracking';
 
 export const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const username = user?.username;
   
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,12 +57,12 @@ export const OrderDetailPage: React.FC = () => {
         }
 
         // Process coin refund if applicable
-        if (rawOrder.status === 'RETURN_REFUNDED' && rawOrder.coinsUsed > 0 && user) {
-          const processedKey = `app_refunded_coins_processed_${user.username}`;
+        if (rawOrder.status === 'RETURN_REFUNDED' && rawOrder.coinsUsed > 0 && username) {
+          const processedKey = `app_refunded_coins_processed_${username}`;
           try {
             const processedList = JSON.parse(localStorage.getItem(processedKey) || '[]');
             if (!processedList.includes(rawOrder.id)) {
-              const coinsKey = `app_user_coins_${user.username}`;
+              const coinsKey = `app_user_coins_${username}`;
               const currentCoins = Number(localStorage.getItem(coinsKey) || '150');
               const nextCoins = currentCoins + rawOrder.coinsUsed;
               localStorage.setItem(coinsKey, nextCoins.toString());
@@ -114,7 +117,7 @@ export const OrderDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, user]);
+  }, [id, username]);
 
   useEffect(() => {
     fetchOrderDetails();
@@ -344,7 +347,7 @@ export const OrderDetailPage: React.FC = () => {
 
         {/* Content Pane */}
         <div className="p-6 sm:p-8">
-          {activeTab === 'invoice' || window.matchMedia('print').matches ? (
+          {activeTab === 'invoice' || window.matchMedia?.('print')?.matches ? (
             <Bill orderData={order} />
           ) : (
             <div className="space-y-8">
@@ -457,19 +460,41 @@ export const OrderDetailPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">เลขพัสดุจัดส่ง (Tracking ID)</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-extrabold text-base text-primary-600 select-all">{order.trackingNumber}</span>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="font-extrabold text-base text-primary-600 select-all font-mono">{order.trackingNumber}</span>
                         <button
+                          type="button"
                           onClick={() => {
                             if (order.trackingNumber) {
                               handleCopyOrderId(order.trackingNumber);
                             }
                           }}
-                          className="p-1 hover:bg-slate-200 rounded-lg text-slate-500 border border-slate-300 transition-colors cursor-pointer"
+                          className="px-2 py-1 hover:bg-slate-200 rounded-lg text-slate-600 border border-slate-300 transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
                           title="คัดลอกเลขพัสดุ"
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          {copiedOrderId === order.trackingNumber ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span className="text-emerald-700">คัดลอกแล้ว</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>คัดลอก</span>
+                            </>
+                          )}
                         </button>
+                        {getCarrierTrackingUrl(order.carrier, order.trackingNumber) && (
+                          <a
+                            href={getCarrierTrackingUrl(order.carrier, order.trackingNumber)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+                          >
+                            <span>เช็คสถานะที่เว็บขนส่ง</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -498,6 +523,61 @@ export const OrderDetailPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Delivery Address & Payment Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Shipping Address */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 space-y-3 shadow-xs">
+                  <div className="flex items-center gap-2 text-slate-800 font-extrabold text-sm">
+                    <MapPin className="w-4 h-4 text-primary-600" />
+                    <span>ที่อยู่จัดส่งสินค้า</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <p className="font-bold text-slate-800">
+                      {order.customer.name} <span className="text-slate-400 font-normal">({order.customer.phone})</span>
+                    </p>
+                    <p className="text-slate-500 leading-relaxed font-medium">
+                      {order.customer.address}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payment & Financial Summary */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between text-slate-800 font-extrabold text-sm">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary-600" />
+                      <span>ข้อมูลการชำระเงิน</span>
+                    </div>
+                    <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {order.paymentMethod === 'cod' ? 'เก็บเงินปลายทาง (COD)' : 'QR พร้อมเพย์'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs pt-1 border-t border-slate-100">
+                    <div className="flex justify-between text-slate-500 font-medium">
+                      <span>ยอดรวมสินค้า</span>
+                      <span>฿{order.items.reduce((s, i) => s + (i.price * i.quantity), 0).toLocaleString()}</span>
+                    </div>
+                    {(order.discount ?? 0) > 0 && (
+                      <div className="flex justify-between text-emerald-600 font-medium">
+                        <span>ส่วนลดโปรโมชั่น</span>
+                        <span>-฿{(order.discount ?? 0).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {(order.coinsUsed ?? 0) > 0 && (
+                      <div className="flex justify-between text-amber-600 font-medium">
+                        <span>เหรียญที่ใช้ ({order.coinsUsed} เหรียญ)</span>
+                        <span>-฿{(order.coinsUsed ?? 0).toLocaleString()}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-900 font-extrabold text-sm pt-1 border-t border-slate-100">
+                      <span>ยอดชำระสุทธิ</span>
+                      <span className="text-primary-600">฿{order.total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               {/* Order Items */}
               <div className="space-y-4">

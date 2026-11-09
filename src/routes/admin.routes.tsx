@@ -1,12 +1,27 @@
+import { lazy, Suspense } from 'react';
 import { RouteObject } from 'react-router-dom';
 import { RoleGuard } from '../role/guards/RoleGuard';
 import { MainLayout } from '../shared/components/layout/MainLayout';
-import { DashboardPage } from '../modules/dashboard/pages/DashboardPage';
-import { ManageProductsPage } from '../modules/products/pages/ManageProductsPage';
-import { ManagePromotionsPage } from '../modules/promotions/pages/ManagePromotionsPage';
-import { AnalyticsPage } from '../modules/dashboard/pages/AnalyticsPage';
-import { SocialCommercePage } from '../modules/dashboard/pages/SocialCommercePage';
-import { ManageNewsPage } from '../modules/promotions/pages/ManageNewsPage';
+import { LoadingFallback } from '../shared/components/ui/LoadingFallback';
+
+const DashboardPage = lazy(() =>
+  import('../modules/dashboard/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+);
+const AnalyticsPage = lazy(() =>
+  import('../modules/dashboard/pages/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage }))
+);
+const ManageProductsPage = lazy(() =>
+  import('../modules/products/pages/ManageProductsPage').then((m) => ({ default: m.ManageProductsPage }))
+);
+const ManagePromotionsPage = lazy(() =>
+  import('../modules/promotions/pages/ManagePromotionsPage').then((m) => ({ default: m.ManagePromotionsPage }))
+);
+const ManageNewsPage = lazy(() =>
+  import('../modules/promotions/pages/ManageNewsPage').then((m) => ({ default: m.ManageNewsPage }))
+);
+const SocialCommercePage = lazy(() =>
+  import('../modules/dashboard/pages/SocialCommercePage').then((m) => ({ default: m.SocialCommercePage }))
+);
 
 export const adminRoutes: RouteObject[] = [
   {
@@ -14,7 +29,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <DashboardPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <DashboardPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -24,7 +41,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <AnalyticsPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <AnalyticsPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -34,7 +53,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <ManageProductsPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <ManageProductsPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -44,7 +65,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <ManagePromotionsPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <ManagePromotionsPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -54,7 +77,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <ManageNewsPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <ManageNewsPage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),
@@ -64,7 +89,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RoleGuard allowedRoles={['admin']}>
         <MainLayout>
-          <SocialCommercePage />
+          <Suspense fallback={<LoadingFallback />}>
+            <SocialCommercePage />
+          </Suspense>
         </MainLayout>
       </RoleGuard>
     ),

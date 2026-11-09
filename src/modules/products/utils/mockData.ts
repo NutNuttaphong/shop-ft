@@ -377,6 +377,31 @@ export const submitProductReview = (productId: string, rating: number, comment: 
   };
 };
 
+export const upvoteReviewHelpful = (reviewId: string): number => {
+  const helpfulKey = `review_helpful_${reviewId}`;
+  try {
+    const current = Number(localStorage.getItem(helpfulKey) || 0);
+    const next = current + 1;
+    localStorage.setItem(helpfulKey, String(next));
+    return next;
+  } catch {
+    return 1;
+  }
+};
+
+export const getReviewHelpfulCount = (reviewId: string, baseCount: number = 0): number => {
+  const helpfulKey = `review_helpful_${reviewId}`;
+  try {
+    const stored = localStorage.getItem(helpfulKey);
+    if (stored !== null) {
+      return baseCount + Number(stored);
+    }
+  } catch {
+    // fallback
+  }
+  return baseCount;
+};
+
 export const getAverageRating = (productId: string, category: string) => {
   const reviews = getProductReviews(productId, category);
   if (reviews.length === 0) {

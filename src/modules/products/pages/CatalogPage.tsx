@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { restfulApi, Product, logVisitorVisit } from '../../../shared/services/api';
 import { 
   Search, Filter, Sparkles, RefreshCw, 
-  Star, X, ArrowUpDown
+  Star, X, ArrowUpDown, Heart
 } from 'lucide-react';
 import { Pagination } from '../../../shared/components/ui/Pagination';
+import { SmartSearchBar } from '../../../shared/components/ui/SmartSearchBar';
+import { filterAndSortProducts, PRICE_PRESETS } from '../../../shared/utils/productFilters';
+import { useWishlist } from '../../../shared/hooks/useWishlist';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   getAverageRating
@@ -61,6 +64,7 @@ const NEWS_ITEMS: NewsItem[] = [
 
 export const CatalogPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +78,16 @@ export const CatalogPage: React.FC = () => {
   const [newsList, setNewsList] = useState<NewsItem[]>(NEWS_ITEMS);
   
   const [searchParams] = useSearchParams();
+
+  // Advanced Filter & Sort State
+  const [minPrice, setMinPrice] = useState<number | ''>('');
+  const [maxPrice, setMaxPrice] = useState<number | ''>('');
+  const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
+  const [minRating, setMinRating] = useState<number>(0);
+  const [showAdvanceFilters, setShowAdvanceFilters] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<string>('newest');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 40;
 
   // const handleNewsClick = (action: string) => {
   //   if (action === 'vegetables') {
@@ -92,33 +106,78 @@ export const CatalogPage: React.FC = () => {
   //   }
   // };
 
-  // Read initial category from URL if present
+  // Read initial category and search query from URL if present
   useEffect(() => {
     const catParam = searchParams.get('category');
     if (catParam) {
       setSelectedCategory(catParam);
     }
+    const qParam = searchParams.get('q') || searchParams.get('search');
+    if (qParam !== null) {
+      setSearchTerm(qParam);
+    }
+    const sortParam = searchParams.get('sort');
+    if (sortParam) {
+      setSortBy(sortParam);
+    }
+    const minP = searchParams.get('minPrice');
+    if (minP && !isNaN(Number(minP))) {
+      setMinPrice(Number(minP));
+    }
+    const maxP = searchParams.get('maxPrice');
+    if (maxP && !isNaN(Number(maxP))) {
+      setMaxPrice(Number(maxP));
+    }
+    const stockParam = searchParams.get('inStock');
+    if (stockParam === 'true') {
+      setOnlyInStock(true);
+    }
+    const ratingParam = searchParams.get('rating');
+    if (ratingParam && !isNaN(Number(ratingParam))) {
+      setMinRating(Number(ratingParam));
+    }
   }, [searchParams]);
+
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    selectedCategory !== 'ทั้งหมด' ||
+    minPrice !== '' ||
+    maxPrice !== '' ||
+    onlyInStock ||
+    minRating > 0
+  );
+
+  const handleClearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('ทั้งหมด');
+    setMinPrice('');
+    setMaxPrice('');
+    setOnlyInStock(false);
+    setMinRating(0);
+    setSortBy('newest');
+    navigate('/products', { replace: true });
+  };
+
+  const handleSearchSubmit = (term: string) => {
+    setSearchTerm(term);
+    const newParams = new URLSearchParams(searchParams);
+    if (term) {
+      newParams.set('q', term);
+    } else {
+      newParams.delete('q');
+      newParams.delete('search');
+    }
+    navigate(`?${newParams.toString()}`, { replace: true });
+  };
   
-  // New Filters
-  const [minPrice, setMinPrice] = useState<number | ''>('');
-  const [maxPrice, setMaxPrice] = useState<number | ''>('');
-  const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
-  const [showAdvanceFilters, setShowAdvanceFilters] = useState<boolean>(false);
-  
-  // Sorting State
-  const [sortBy, setSortBy] = useState<string>('newest');
-  
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 40; // Set to 40 items per page as requested
+
   
 
 
   // Reset page when filtering
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, minPrice, maxPrice, onlyInStock, sortBy]);
+  }, [searchTerm, selectedCategory, minPrice, maxPrice, onlyInStock, minRating, sortBy]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -179,32 +238,18 @@ export const CatalogPage: React.FC = () => {
 
 
 
-  // Filter Logic
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'ทั้งหมด' || product.category === selectedCategory;
-    const matchesMinPrice = minPrice === '' || product.price >= minPrice;
-    const matchesMaxPrice = maxPrice === '' || product.price <= maxPrice;
-    const matchesStock = !onlyInStock || product.stock > 0;
-    
-    return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice && matchesStock;
-  });
-
-  // Sort Logic
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === 'price-asc') {
-      return a.price - b.price;
-    } else if (sortBy === 'price-desc') {
-      return b.price - a.price;
-    } else if (sortBy === 'name-asc') {
-      return a.name.localeCompare(b.name, 'th');
-    } else if (sortBy === 'newest') {
-      // Sort by newest based on id or default logic
-      return b.id.localeCompare(a.id);
-    }
-    return 0;
-  });
+  // Filter & Sort Logic using productFilters utility
+  const sortedProducts = useMemo(() => {
+    return filterAndSortProducts(products, {
+      searchTerm,
+      category: selectedCategory,
+      minPrice,
+      maxPrice,
+      onlyInStock,
+      minRating,
+      sortBy
+    });
+  }, [products, searchTerm, selectedCategory, minPrice, maxPrice, onlyInStock, minRating, sortBy]);
 
   // Pagination Logic
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
@@ -305,18 +350,14 @@ export const CatalogPage: React.FC = () => {
       <div className="bg-white/75 backdrop-blur-md p-6 rounded-3xl border border-white/60 shadow-lg shadow-slate-100/50 space-y-4 relative z-10">
         <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
           {/* Search Input */}
-          <div className="relative flex-1">
-            <label htmlFor="search" className="sr-only">ค้นหาสินค้า</label>
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-400 pointer-events-none">
-              <Search className="w-5 h-5" />
-            </span>
-            <input
+          <div className="flex-1">
+            <SmartSearchBar
               id="search"
-              type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={setSearchTerm}
+              onSearch={handleSearchSubmit}
+              products={products}
               placeholder="ค้นหาชื่อสินค้า หรือรายละเอียดที่คุณต้องการ..."
-              className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-[16px] placeholder-slate-400 focus:bg-white focus:border-primary-500 transition-all focus:outline-none"
             />
           </div>
 
@@ -350,6 +391,8 @@ export const CatalogPage: React.FC = () => {
                 <option value="newest">จัดเรียง: ล่าสุด</option>
                 <option value="price-asc">ราคา: ต่ำ - สูง</option>
                 <option value="price-desc">ราคา: สูง - ต่ำ</option>
+                <option value="rating-desc">คะแนนรีวิว: สูงสุด ★</option>
+                <option value="popular">สินค้าขายดี / ยอดนิยม</option>
                 <option value="name-asc">ชื่อสินค้า: ก - ฮ</option>
               </select>
             </div>
@@ -359,9 +402,20 @@ export const CatalogPage: React.FC = () => {
         {/* Expandable Advanced Filters */}
         {showAdvanceFilters && (
           <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
-            {/* Price Range Filter */}
+            {/* Price Range Filter & Presets */}
             <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700">ช่วงราคา (บาท)</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-bold text-slate-700">ช่วงราคา (บาท)</label>
+                {(minPrice !== '' || maxPrice !== '') && (
+                  <button
+                    type="button"
+                    onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                    className="text-xs text-primary-600 hover:underline font-bold"
+                  >
+                    รีเซ็ตราคา
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -379,37 +433,142 @@ export const CatalogPage: React.FC = () => {
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-500"
                 />
               </div>
+              {/* Quick Price Presets */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {PRICE_PRESETS.map((preset) => {
+                  const isActive = minPrice === preset.minPrice && maxPrice === preset.maxPrice;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        if (isActive) {
+                          setMinPrice('');
+                          setMaxPrice('');
+                        } else {
+                          setMinPrice(preset.minPrice);
+                          setMaxPrice(preset.maxPrice);
+                        }
+                      }}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${
+                        isActive
+                          ? 'bg-primary-600 text-white font-bold shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Stock Availability Filter */}
-            <div className="space-y-2 flex flex-col justify-end">
-              <label className="inline-flex items-center cursor-pointer pb-2 select-none">
+            {/* Rating Filter */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-bold text-slate-700">เกณฑ์คะแนนรีวิว</label>
+                {minRating > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(0)}
+                    className="text-xs text-primary-600 hover:underline font-bold"
+                  >
+                    รีเซ็ตคะแนน
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { label: 'ทั้งหมด', val: 0 },
+                  { label: '★ 4.0 ขึ้นไป', val: 4.0 },
+                  { label: '★ 4.5 ขึ้นไป', val: 4.5 }
+                ].map((opt) => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    onClick={() => setMinRating(opt.val)}
+                    className={`text-xs px-3.5 py-2 rounded-xl font-bold transition-all border ${
+                      minRating === opt.val
+                        ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Stock Availability Filter & Clear Action */}
+            <div className="space-y-3 flex flex-col justify-end">
+              <label className="inline-flex items-center cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={onlyInStock}
                   onChange={(e) => setOnlyInStock(e.target.checked)}
                   className="rounded text-primary-600 focus:ring-primary-500 w-5 h-5 mr-3 border-2 border-slate-300"
                 />
-                <span className="text-[16px] font-bold text-slate-700">แสดงเฉพาะสินค้าที่มีอยู่ในสต็อก</span>
+                <span className="text-[15px] font-bold text-slate-700">แสดงเฉพาะสินค้าที่มีอยู่ในสต็อก</span>
               </label>
-            </div>
 
-            {/* Clear Filters Button */}
-            <div className="flex items-end justify-end">
-              {(minPrice !== '' || maxPrice !== '' || onlyInStock || searchTerm !== '' || selectedCategory !== 'ทั้งหมด') && (
+              {hasActiveFilters && (
                 <button
-                  onClick={() => {
-                    setMinPrice('');
-                    setMaxPrice('');
-                    setOnlyInStock(false);
-                    setSearchTerm('');
-                    setSelectedCategory('ทั้งหมด');
-                  }}
-                  className="text-xs font-bold text-danger-600 hover:text-danger-700 border border-danger-200 hover:border-danger-300 bg-danger-50 px-4 py-2 rounded-xl transition-all"
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="w-full text-xs font-bold text-danger-600 hover:text-danger-700 border border-danger-200 hover:border-danger-300 bg-danger-50 hover:bg-danger-100/80 px-4 py-2 rounded-xl transition-all"
                 >
                   ล้างตัวกรองทั้งหมด
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Active Filters Summary Chips & Counter */}
+        {hasActiveFilters && (
+          <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-slate-400 font-bold uppercase tracking-wider text-[11px] mr-1">ตัวกรอง:</span>
+              {searchTerm && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg font-medium">
+                  <span>ค้นหา: "{searchTerm}"</span>
+                  <button type="button" onClick={() => setSearchTerm('')} aria-label="ลบคำค้นหา" className="hover:text-primary-900"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {selectedCategory !== 'ทั้งหมด' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg font-medium">
+                  <span>หมวดหมู่: {selectedCategory}</span>
+                  <button type="button" onClick={() => setSelectedCategory('ทั้งหมด')} aria-label="ลบหมวดหมู่" className="hover:text-primary-900"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {(minPrice !== '' || maxPrice !== '') && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 border border-primary-200 rounded-lg font-medium">
+                  <span>ราคา: ฿{minPrice || 0} - {maxPrice ? `฿${maxPrice}` : 'ไม่จำกัด'}</span>
+                  <button type="button" onClick={() => { setMinPrice(''); setMaxPrice(''); }} aria-label="ลบราคา" className="hover:text-primary-900"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {minRating > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-medium">
+                  <span>★ {minRating}+</span>
+                  <button type="button" onClick={() => setMinRating(0)} aria-label="ลบคะแนน" className="hover:text-amber-900"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              {onlyInStock && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-medium">
+                  <span>มีสินค้าในสต็อก</span>
+                  <button type="button" onClick={() => setOnlyInStock(false)} aria-label="ลบตัวกรองสต็อก" className="hover:text-emerald-900"><X className="w-3 h-3" /></button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="text-primary-600 hover:text-primary-700 font-bold ml-1 hover:underline cursor-pointer"
+              >
+                ล้างทั้งหมด
+              </button>
+            </div>
+            <div className="text-slate-500 font-bold">
+              พบสินค้า <span className="text-primary-600 font-extrabold">{sortedProducts.length}</span> รายการ
             </div>
           </div>
         )}
@@ -468,14 +627,23 @@ export const CatalogPage: React.FC = () => {
               </button>
             </div>
           ) : sortedProducts.length === 0 ? (
-            <div className="bg-white border border-slate-200 p-12 rounded-3xl text-center max-w-md mx-auto">
-              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="bg-white border border-slate-200 p-12 rounded-3xl text-center max-w-md mx-auto space-y-4">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto">
                 <Search className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">ไม่พบสินค้าที่ต้องการ</h3>
-              <p className="text-slate-500 leading-relaxed">
-                ลองใช้คำค้นหาอื่น หรือปรับเปลี่ยนการกรองดูนะคะ
+              <h3 className="text-xl font-bold text-slate-800">ไม่พบสินค้าที่ตรงกับเงื่อนไข</h3>
+              <p className="text-slate-500 leading-relaxed text-sm">
+                ลองปรับเปลี่ยนช่วงราคา หมวดหมู่ หรือคำค้นหา เพื่อค้นหาสินค้าใหม่อีกครั้ง
               </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-primary-200"
+                >
+                  ล้างตัวกรองทั้งหมด
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -513,7 +681,23 @@ export const CatalogPage: React.FC = () => {
                           </div>
                         ) : null}
                         
-                        <div className="absolute top-2 right-2 bg-slate-900/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md text-[10px] font-semibold">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(product);
+                          }}
+                          className={`absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center backdrop-blur-xs transition-all z-20 shadow-sm ${
+                            isWishlisted(product.id)
+                              ? 'bg-rose-500 text-white shadow-rose-200'
+                              : 'bg-white/80 text-slate-500 hover:text-rose-500 hover:bg-white'
+                          }`}
+                          title={isWishlisted(product.id) ? 'ลบออกจากรายการถูกใจ' : 'เพิ่มในรายการถูกใจ'}
+                        >
+                          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted(product.id) ? 'fill-current' : ''}`} />
+                        </button>
+
+                        <div className="absolute bottom-2 left-2 bg-slate-900/60 backdrop-blur-xs text-white px-2 py-0.5 rounded-md text-[10px] font-semibold">
                           {product.category}
                         </div>
                       </div>
