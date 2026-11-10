@@ -31,7 +31,7 @@ export const userRoutes: RouteObject[] = [
     path: '/',
     element: (
       <MainLayout>
-        <CatalogPage />
+        <HomePage />
       </MainLayout>
     ),
   },

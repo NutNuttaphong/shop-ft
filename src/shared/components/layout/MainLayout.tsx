@@ -122,8 +122,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         { path: '/admin/news', label: 'การจัดการข่าวสาร', icon: Newspaper },
       ]
     : [
-        { path: '/', label: 'หน้าสินค้า', icon: ShoppingBag },
-        { path: '/home', label: 'หน้าหลัก', icon: Home },
+        { path: '/', label: 'หน้าหลัก', icon: Home },
+        { path: '/products', label: 'หน้าสินค้า', icon: ShoppingBag },
         { path: '/promotions', label: 'โปรโมชั่น', icon: Gift },
         { path: '/wishlist', label: 'สินค้าที่ถูกใจ', icon: Heart, showWishlistBadge: true },
         { path: '/cart', label: 'ตะกร้าสินค้าของฉัน', icon: ShoppingCart, showBadge: true },
@@ -213,7 +213,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.path === '/' 
-                    ? (location.pathname === '/' || location.pathname === '/products') 
+                    ? (location.pathname === '/' || location.pathname === '/home') 
+                    : item.path === '/products'
+                    ? (location.pathname === '/products' || location.pathname.startsWith('/products/'))
                     : location.pathname === item.path;
                   return (
                     <Link
@@ -442,7 +444,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.path === '/' 
-                    ? (location.pathname === '/' || location.pathname === '/products') 
+                    ? (location.pathname === '/' || location.pathname === '/home') 
+                    : item.path === '/products'
+                    ? (location.pathname === '/products' || location.pathname.startsWith('/products/'))
                     : location.pathname === item.path;
                   return (
                     <Link

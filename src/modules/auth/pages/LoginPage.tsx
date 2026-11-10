@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  LogIn, User, Lock, AlertCircle, ShoppingBag, ShieldCheck, 
+  LogIn, User, Lock, AlertCircle, ShoppingBag, 
   UserPlus, Phone, MapPin, Smile 
 } from 'lucide-react';
 
@@ -102,18 +102,6 @@ export const LoginPage: React.FC = () => {
         setIsSubmitting(false);
       }
     }
-  };
-
-  // Quick fill helper
-  const handleQuickFill = (userType: 'user' | 'admin') => {
-    if (userType === 'user') {
-      setUsername('user@1234');
-      setPassword('user@1234');
-    } else {
-      setUsername('admin@1234');
-      setPassword('admin@1234');
-    }
-    setErrorMsg(null);
   };
 
   return (
@@ -250,36 +238,6 @@ export const LoginPage: React.FC = () => {
                     </>
                   )}
                 </button>
-
-                <div className="relative flex items-center justify-center my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200"></div>
-                  </div>
-                  <span className="relative px-4 bg-white text-slate-400 text-[11px] font-bold uppercase tracking-wider">หรือคลิกกรอกบัญชีทดสอบด่วน</span>
-                </div>
-
-                {/* Quick-fill Helper */}
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('user')}
-                    className="flex flex-col items-center justify-center p-3 bg-slate-50 hover:bg-primary-50 border border-slate-200 hover:border-primary-400 rounded-2xl transition-all group focus-visible:ring-primary-400 text-center"
-                  >
-                    <ShoppingBag className="w-6 h-6 text-primary-500 mb-1.5 group-hover:scale-110 transition-transform" />
-                    <span className="font-extrabold text-slate-700 block text-xs">บัญชีลูกค้า</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">user@1234</span>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => handleQuickFill('admin')}
-                    className="flex flex-col items-center justify-center p-3 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-400 rounded-2xl transition-all group focus-visible:ring-emerald-400 text-center"
-                  >
-                    <ShieldCheck className="w-6 h-6 text-emerald-600 mb-1.5 group-hover:scale-110 transition-transform" />
-                    <span className="font-extrabold text-slate-700 block text-xs">บัญชีผู้ดูแล</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">admin@1234</span>
-                  </button>
-                </div>
               </>
             ) : (
               /* REGISTER MODE FORM */
